@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+supabase
+requests
+resend
+PyPDF2
+beautifulsoup4
+groq
+google-generativeai
+python-dotenv
+pydantic
+pydantic-settings
+aiohttp
+python-multipart
+pyjwt
+httpx
