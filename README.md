@@ -1,4 +1,4 @@
-# 🚀 Internify - AI-Powered Internship Application Platform
+# Internify - AI-Powered Internship Application Platform
 
 Internify is a modern, full-stack web platform that automates the entire internship application process. It helps users send personalized cold emails to companies by leveraging AI, real-time job scraping, and automated email outreach.
 
@@ -9,7 +9,7 @@ Internify is a modern, full-stack web platform that automates the entire interns
 
 ---
 
-## ✨ Features
+## Features
 
 - 🔐 **Secure Authentication** - Supabase Auth with JWT validation
 - 📄 **Resume Upload & Parsing** - Extract key information from PDF resumes
@@ -22,7 +22,7 @@ Internify is a modern, full-stack web platform that automates the entire interns
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **Framework:** Next.js 14 (App Router)
@@ -45,7 +45,7 @@ Internify is a modern, full-stack web platform that automates the entire interns
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 internify/
@@ -99,7 +99,7 @@ internify/
 
 ---
 
-## 🚦 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -184,7 +184,7 @@ Frontend will be available at `http://localhost:3000`
 
 ---
 
-## 🗄️ Database Schema
+## Database Schema
 
 Create these tables in your Supabase database:
 
@@ -239,7 +239,7 @@ CREATE TABLE resumes (
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Authentication
 - `POST /auth/verify` - Verify Supabase JWT token
@@ -259,7 +259,7 @@ CREATE TABLE resumes (
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Frontend (Vercel)
 
@@ -283,7 +283,7 @@ Already cloud-hosted. Just configure connection strings.
 
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
 ### Backend `.env`
 ```env
@@ -317,7 +317,7 @@ NEXT_PUBLIC_BACKEND_URL=
 
 ---
 
-## 🎨 UI/UX Highlights
+## UI/UX Highlights
 
 - Clean, modern SaaS-inspired design
 - Soft color palette (blue, white, gray tones)
@@ -328,7 +328,7 @@ NEXT_PUBLIC_BACKEND_URL=
 
 ---
 
-## 🛠️ Future Enhancements
+## Future Enhancements
 
 - [ ] Email analytics (open/reply tracking)
 - [ ] Chrome extension for direct LinkedIn integration
@@ -341,19 +341,19 @@ NEXT_PUBLIC_BACKEND_URL=
 
 ---
 
-## 📄 License
+## License
 
 MIT License
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 Built with ❤️ for automating internship applications
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Supabase for authentication and database
 - Resend for email delivery
