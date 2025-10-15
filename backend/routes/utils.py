@@ -46,7 +46,11 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
             print("WARNING: SUPABASE_JWT_SECRET not set. Decoding token without verification.")
             payload = jwt.decode(
                 token,
-                options={"verify_signature": False, "verify_exp": False}
+                options={
+                    "verify_signature": False, 
+                    "verify_exp": False,
+                    "verify_aud": False  # Skip audience verification
+                }
             )
         else:
             # Decode and verify token with the JWT secret
@@ -54,7 +58,11 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
                 token,
                 jwt_secret,
                 algorithms=["HS256"],
-                options={"verify_signature": True, "verify_exp": True}
+                options={
+                    "verify_signature": True, 
+                    "verify_exp": True,
+                    "verify_aud": False  # Skip audience verification for now
+                }
             )
         
         return payload
