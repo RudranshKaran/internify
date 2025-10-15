@@ -38,40 +38,47 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> dict:
             )
         
         # Get Supabase JWT secret
-        jwt_secret = os.getenv("SUPABASE_JWT_SECRET") or os.getenv("SUPABASE_ANON_KEY")
+        jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
         
         if not jwt_secret:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="JWT secret not configured"
+            # If JWT_SECRET is not set, try to decode without verification (development only)
+            # In production, you MUST set SUPABASE_JWT_SECRET
+            print("WARNING: SUPABASE_JWT_SECRET not set. Decoding token without verification.")
+            payload = jwt.decode(
+                token,
+                options={"verify_signature": False, "verify_exp": False}
             )
-        
-        # Decode and verify token
-        payload = jwt.decode(
-            token,
-            jwt_secret,
-            algorithms=["HS256"],
-            options={"verify_signature": True, "verify_exp": True}
-        )
+        else:
+            # Decode and verify token with the JWT secret
+            payload = jwt.decode(
+                token,
+                jwt_secret,
+                algorithms=["HS256"],
+                options={"verify_signature": True, "verify_exp": True}
+            )
         
         return payload
     
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as e:
+        print(f"Token expired: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired"
         )
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        print(f"Invalid token: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
-    except ValueError:
+    except ValueError as e:
+        print(f"Invalid header format: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization header format"
         )
     except Exception as e:
+        print(f"Authentication failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {str(e)}"

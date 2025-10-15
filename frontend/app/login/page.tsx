@@ -59,27 +59,48 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        console.log('Login page: Attempting login...')
+        console.log('Login page: Attempting login with email:', email)
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
         
         if (error) {
-          console.error('Login page: Login error:', error)
+          console.error('Login page: Login error:', error.message, error)
+          isLoggingIn.current = false
           throw error
         }
         
-        console.log('Login page: Login successful, session:', data.session ? 'exists' : 'none')
+        console.log('Login page: Login successful!', {
+          hasSession: !!data.session,
+          hasUser: !!data.user,
+          userId: data.user?.id,
+          userEmail: data.user?.email
+        })
         
         if (data.session) {
           isRedirecting.current = true
           toast.success('Logged in successfully!')
-          console.log('Login page: Redirecting to dashboard...')
-          // Use window.location.href for full page reload to ensure session is set
-          setTimeout(() => {
-            window.location.href = '/dashboard'
-          }, 800)
+          console.log('Login page: Session established, verifying persistence...')
+          
+          // Wait for session to be persisted and verify it's retrievable
+          // This prevents race conditions on the dashboard
+          let attempts = 0
+          const maxAttempts = 10
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+            const { data: { session: verifiedSession } } = await supabase.auth.getSession()
+            if (verifiedSession) {
+              console.log('Login page: Session verified in storage, redirecting...')
+              window.location.href = '/dashboard'
+              return
+            }
+            attempts++
+          }
+          
+          // If we couldn't verify, redirect anyway
+          console.log('Login page: Timeout waiting for session persistence, redirecting anyway...')
+          window.location.href = '/dashboard'
           return // Don't reset loading
         }
       } else {
@@ -106,8 +127,16 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error('Auth error:', error)
-      toast.error(error.message || 'An error occurred')
+      const errorMessage = error.message || error.error_description || 'An error occurred'
+      toast.error(errorMessage)
       setLoading(false)
+      isLoggingIn.current = false
+    } finally {
+      // Reset loading if not redirecting
+      if (!isRedirecting.current) {
+        setLoading(false)
+        isLoggingIn.current = false
+      }
     }
   }
 
