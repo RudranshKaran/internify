@@ -23,7 +23,7 @@ async def generate_email(
     Generate a personalized cold email using AI
     
     Args:
-        request: Email generation request with job details and resume
+        request: Email generation request with internship details and resume
     
     Returns:
         Generated email subject and body
@@ -48,8 +48,8 @@ async def generate_email(
         # Generate email body using LLM
         email_body = await llm_service.generate_email(
             resume_text=resume_text,
-            job_description=request.job_description,
-            job_title=request.job_title,
+            internship_description=request.internship_description,
+            internship_title=request.internship_title,
             company_name=request.company_name
         )
         

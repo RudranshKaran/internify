@@ -1,258 +1,376 @@
-# 🧪 Testing Checklist - Authentication Fixes
+# Internify - Quick Testing Checklist
 
-## Before Testing
-
-1. **Hard Refresh Browser**: Press `Ctrl + Shift + R` (Windows) or `Cmd + Shift + R` (Mac)
-2. **Clear Browser Storage**: Open DevTools (F12) → Console → Run:
-   ```javascript
-   localStorage.clear()
-   sessionStorage.clear()
-   location.reload()
-   ```
-3. **Verify Server Running**: http://localhost:3000 should be accessible
+Use this checklist to verify all features are working correctly after the improvements.
 
 ---
 
-## Test Case 1: Direct Login from Login Page ✅
+## 🔐 Authentication Tests
 
-**Steps**:
-1. Navigate to http://localhost:3000/login
-2. Enter your email and password
-3. Click "Sign In"
+- [ ] **Sign Up**
+  - Visit `/login`
+  - Click "Sign up instead"
+  - Enter email and password
+  - Verify email confirmation works
+  - Login with new account
 
-**Expected Result**:
-- ✅ See "Logged in successfully!" toast message
-- ✅ Redirect to /dashboard after ~1 second
-- ✅ Dashboard loads with your data
-- ✅ NO page flickering or jumping
-- ✅ NO redirect back to login
+- [ ] **Sign In**
+  - Visit `/login`
+  - Enter credentials
+  - Successfully redirects to `/dashboard`
+  - No redirect loop occurs
 
-**If Failed**: Check browser console for errors, note the exact behavior
+- [ ] **Session Persistence**
+  - Login successfully
+  - Refresh page
+  - Should stay logged in
+  - Should not redirect to login
 
----
-
-## Test Case 2: Resume Upload ✅
-
-**Steps**:
-1. Login and go to dashboard
-2. Click on the resume upload area
-3. Select a PDF file from your computer
-4. Wait for upload to complete
-
-**Expected Result**:
-- ✅ See "Resume uploaded successfully!" toast
-- ✅ Stay on /dashboard page
-- ✅ Resume appears in the resume section
-- ✅ NO redirect to login
-- ✅ NO 401 errors in console
-
-**If Failed**: Check Network tab in DevTools for the resume upload request
+- [ ] **Sign Out**
+  - Click "Sign Out" in navbar
+  - Redirects to `/login`
+  - Session cleared
+  - Cannot access `/dashboard` without login
 
 ---
 
-## Test Case 3: Direct URL Navigation to Login (While Logged In) ✅
+## 📄 Resume Management Tests
 
-**Steps**:
-1. Login first (you should be on /dashboard)
-2. Manually type http://localhost:3000/login in the address bar
-3. Press Enter
+- [ ] **Upload Resume**
+  - Click or drag PDF file to upload area
+  - Shows "Uploading..." state
+  - Success toast appears
+  - File name displays
+  - "Replace" and "Delete" buttons appear
 
-**Expected Result**:
-- ✅ Immediately redirect to /dashboard
-- ✅ NO flash of login page
-- ✅ NO loading spinner
-- ✅ Stay on dashboard
+- [ ] **Replace Resume**
+  - Click "Replace" button
+  - File picker opens
+  - Select new PDF
+  - New resume uploads successfully
+  - New filename displays
 
-**If Failed**: Note if you see login page briefly before redirect
+- [ ] **Delete Resume**
+  - Click "Delete" button
+  - Confirmation modal appears
+  - Click "Cancel" → modal closes, resume stays
+  - Click "Delete" button again
+  - Click "Delete" in modal → resume deleted
+  - Success toast appears
+  - Job results clear (if any)
+  - Upload area reappears
 
----
-
-## Test Case 4: Direct URL Navigation to Dashboard (While Logged Out) ✅
-
-**Steps**:
-1. Logout first (or open in incognito mode)
-2. Navigate to http://localhost:3000/dashboard
-3. Observe what happens
-
-**Expected Result**:
-- ✅ Redirect to /login once
-- ✅ See login form
-- ✅ NO continuous redirects
-- ✅ NO page flickering
-
-**If Failed**: Open Network tab to see if requests are looping
-
----
-
-## Test Case 5: Page Refresh on Dashboard ✅
-
-**Steps**:
-1. Login and go to /dashboard
-2. Press F5 or Ctrl+R to refresh the page
-
-**Expected Result**:
-- ✅ Stay on /dashboard
-- ✅ Page reloads with your data
-- ✅ Resume loads if you uploaded one
-- ✅ NO redirect to login
-
-**If Failed**: Check if session is being cleared
+- [ ] **Invalid File Upload**
+  - Try uploading .docx or .txt file
+  - Error message appears
+  - Resume not uploaded
 
 ---
 
-## Test Case 6: Navigation Between Protected Pages ✅
+## 🔍 Job Search Tests
 
-**Steps**:
-1. Login
-2. Go to /dashboard
-3. Click "History" in navbar
-4. Go to /history
-5. Click "Dashboard" in navbar
-6. Go back to /dashboard
+- [ ] **Search Jobs**
+  - Upload resume first
+  - Enter search query (e.g., "Software Engineer Intern")
+  - Click "Search Jobs"
+  - Shows "Searching..." state
+  - Job cards appear
+  - Success toast shows job count
 
-**Expected Result**:
-- ✅ All navigation works smoothly
-- ✅ NO redirects to login
-- ✅ NO auth checks causing delays
-- ✅ Data loads on each page
+- [ ] **Empty Search**
+  - Clear search field
+  - Try to search
+  - Should prevent search or show error
 
-**If Failed**: Note which page causes issues
-
----
-
-## Test Case 7: Browser Back Button ✅
-
-**Steps**:
-1. Login
-2. Navigate: /dashboard → /history → /email-preview (select a job first)
-3. Click browser back button twice
-4. Should go: /email-preview → /history → /dashboard
-
-**Expected Result**:
-- ✅ Navigation works as expected
-- ✅ NO unexpected redirects
-- ✅ NO auth re-checks on back navigation
-
-**If Failed**: Note if redirects happen during back navigation
+- [ ] **No Results**
+  - Search for nonsense term (e.g., "xyzabc123")
+  - Shows "No jobs found" message
+  - No error occurs
 
 ---
 
-## Test Case 8: Logout and Login Again ✅
+## ✅ Job Selection Tests
 
-**Steps**:
-1. Login
-2. Go to dashboard
-3. Click "Sign Out" button
-4. Should redirect to /login
-5. Login again
+- [ ] **Select Job Card**
+  - Search and display jobs
+  - Job cards show "Click to select" badge
+  - Click any job card
+  - Card border turns blue/primary
+  - Checkmark appears in top-right
+  - "Generate Email" button appears in header
+  - Green confirmation banner appears at bottom
+  - Selected job details show in banner
 
-**Expected Result**:
-- ✅ Logout clears session
-- ✅ Redirect to /login
-- ✅ Can login again successfully
-- ✅ NO redirect loops
+- [ ] **Change Selection**
+  - Click different job card
+  - Previous card deselects
+  - New card selects
+  - Confirmation banner updates
 
-**If Failed**: Check if session is properly cleared
-
----
-
-## Test Case 9: Open Multiple Tabs ✅
-
-**Steps**:
-1. Login in Tab 1
-2. Open http://localhost:3000/dashboard in Tab 2
-3. Both tabs should work
-4. Logout in Tab 1
-5. Refresh Tab 2
-
-**Expected Result**:
-- ✅ Tab 2 works when logged in
-- ✅ Tab 2 redirects to login after logout + refresh
-- ✅ NO conflicts between tabs
-
-**If Failed**: SessionStorage should be per-tab, so no conflicts should occur
+- [ ] **Hover Effects**
+  - Hover over unselected card
+  - Card scales slightly
+  - Border color changes
+  - Smooth animation
 
 ---
 
-## Test Case 10: Network Issues Simulation ✅
+## ✉️ Email Generation Tests
 
-**Steps**:
-1. Login
-2. Open DevTools → Network tab
-3. Set network to "Slow 3G"
-4. Try to upload resume
-5. Observe behavior
+- [ ] **Generate Email - Top Button**
+  - Select a job
+  - Click "Generate Email" button in header
+  - Navigates to `/email-preview`
+  - Shows "Generating personalized email..." loading
+  - Email preview loads with AI-generated content
+  - Subject field populated
+  - Body field populated
+  - Recipient email extracted or placeholder shown
 
-**Expected Result**:
-- ✅ Upload takes longer but succeeds
-- ✅ NO premature timeout redirects
-- ✅ Loading indicator shows
-- ✅ Success message when done
+- [ ] **Generate Email - Bottom Button**
+  - Select a job
+  - Scroll to green confirmation banner
+  - Click "Continue →" button
+  - Same flow as above
 
-**If Failed**: Check if timeout is causing issues
+- [ ] **Edit Email**
+  - On email preview page
+  - Edit subject field → changes save
+  - Edit body field → changes save
+  - Edit recipient email → changes save
 
----
+- [ ] **Regenerate Email**
+  - Click "Regenerate" button with refresh icon
+  - Shows generating state
+  - New email content appears
+  - Subject and body update
 
-## Debugging Commands
+- [ ] **Send Email**
+  - Review/edit email
+  - Click "Send Email" button
+  - Shows "Sending..." state
+  - Success toast appears
+  - Redirects to `/history`
+  - Sent email appears in history
 
-If you encounter issues, run these in browser console (F12):
-
-### Check Current Session
-```javascript
-const { data: { session } } = await supabase.auth.getSession()
-console.log('Session:', session)
-console.log('User:', session?.user)
-console.log('Token:', session?.access_token)
-```
-
-### Check Storage
-```javascript
-console.log('LocalStorage:', {...localStorage})
-console.log('SessionStorage:', {...sessionStorage})
-```
-
-### Clear Everything
-```javascript
-localStorage.clear()
-sessionStorage.clear()
-await supabase.auth.signOut()
-location.reload()
-```
-
-### Watch for Redirects
-```javascript
-// Run this before testing
-const originalPush = window.history.pushState
-window.history.pushState = function(...args) {
-  console.log('Navigation:', args[2])
-  return originalPush.apply(this, args)
-}
-```
+- [ ] **Back Navigation**
+  - Click "Back to Dashboard" link
+  - Returns to dashboard
+  - Job selection persists (or clears, depending on implementation)
 
 ---
 
-## What to Report
+## 📜 History Tests
 
-If any test fails, please provide:
+- [ ] **View History - Empty**
+  - Fresh account with no sent emails
+  - Visit `/history` via navbar
+  - Shows empty state message
+  - "Go to Dashboard" button works
 
-1. **Test Case Number**: e.g., "Test Case 2 failed"
-2. **Actual Behavior**: What actually happened
-3. **Browser Console Errors**: Any red errors in console
-4. **Network Tab**: Screenshot of Network tab during the issue
-5. **Steps to Reproduce**: Exact steps to make it happen again
+- [ ] **View History - With Emails**
+  - After sending at least one email
+  - Visit `/history`
+  - Email card appears
+  - Shows: subject, company, date
+  - Click to expand → shows full body (if implemented)
+
+- [ ] **History Details**
+  - Verify correct company name
+  - Verify correct date/time
+  - Verify emails sorted by date (newest first)
+  - All sent emails appear
 
 ---
 
-## Success Criteria
+## 📋 Legal Pages Tests
 
-All 10 test cases should pass ✅
+- [ ] **Privacy Policy**
+  - Scroll to footer
+  - Click "Privacy Policy" link
+  - Page loads at `/privacy`
+  - Content displays correctly
+  - "Back to Home" link works
+  - Footer shows on page
 
-If all pass:
-- 🎉 Authentication is working correctly!
-- 🎉 Resume upload is working!
-- 🎉 Navigation is smooth!
-- 🎉 No redirect loops!
+- [ ] **Terms of Service**
+  - Scroll to footer
+  - Click "Terms of Service" link
+  - Page loads at `/terms`
+  - Content displays correctly
+  - "Back to Home" link works
+  - Footer shows on page
 
 ---
 
-**Ready to Test?** Start with Test Case 1 and work through them in order!
+## 🎨 UI/UX Tests
+
+- [ ] **Responsive Design**
+  - Test on mobile view (< 768px)
+  - Navbar collapses to hamburger menu
+  - Job cards stack vertically
+  - All buttons remain accessible
+  - No horizontal scroll
+  - Footer stacks correctly
+
+- [ ] **Loading States**
+  - Resume upload shows spinner
+  - Job search shows loader
+  - Email generation shows loader
+  - All async operations have feedback
+
+- [ ] **Toast Notifications**
+  - Success toasts appear (green)
+  - Error toasts appear (red)
+  - Info toasts appear (blue)
+  - Toasts auto-dismiss after 3-5 seconds
+
+- [ ] **Modals**
+  - Delete confirmation modal centers on screen
+  - Background dims (overlay)
+  - Click outside modal → doesn't close (safe)
+  - Cancel button closes modal
+  - Escape key closes modal (optional)
+
+---
+
+## 🔒 Security Tests
+
+- [ ] **Protected Routes**
+  - Logout
+  - Try to visit `/dashboard` directly
+  - Redirects to `/login`
+  - Same for `/history` and `/email-preview`
+
+- [ ] **Resume Ownership**
+  - User A uploads resume
+  - User A can only delete their own resume
+  - (Cannot test cross-user deletion without 2 accounts)
+
+- [ ] **Token Expiration**
+  - Login successfully
+  - Wait for token to expire (or manually clear storage)
+  - Try to perform action
+  - Should redirect to login with error
+
+---
+
+## 🐛 Error Handling Tests
+
+- [ ] **Network Errors**
+  - Disconnect internet
+  - Try to upload resume
+  - Shows error toast
+  - Graceful failure (no crash)
+
+- [ ] **Backend Errors**
+  - (Simulate by stopping backend server)
+  - Try any API operation
+  - Shows error toast
+  - User informed of issue
+
+- [ ] **Invalid JWT**
+  - Manipulate token in browser storage
+  - Try to access protected route
+  - Redirects to login
+  - Session cleared
+
+- [ ] **Missing Data**
+  - Try to visit `/email-preview` without selecting job
+  - Redirects to dashboard
+  - Shows error toast
+
+---
+
+## 🚀 End-to-End Flow Test
+
+Complete this full workflow without errors:
+
+1. [ ] Open application in incognito window
+2. [ ] Sign up with new email
+3. [ ] Verify email (if required)
+4. [ ] Login successfully
+5. [ ] Upload resume PDF
+6. [ ] Verify "Replace" and "Delete" buttons appear
+7. [ ] Search for "Python Intern"
+8. [ ] Verify job cards display
+9. [ ] Click to select a job
+10. [ ] Verify selection indicators appear
+11. [ ] Click "Generate Email" button
+12. [ ] Verify AI-generated email loads
+13. [ ] Edit subject line
+14. [ ] Edit body text
+15. [ ] Change recipient email
+16. [ ] Click "Send Email"
+17. [ ] Verify success toast
+18. [ ] Verify redirect to history
+19. [ ] Verify sent email appears in history
+20. [ ] Click navbar "Dashboard" link
+21. [ ] Verify dashboard loads
+22. [ ] Click "Delete" resume button
+23. [ ] Confirm deletion in modal
+24. [ ] Verify resume deleted and upload area returns
+25. [ ] Scroll to footer
+26. [ ] Click "Privacy Policy"
+27. [ ] Verify page loads
+28. [ ] Go back, click "Terms of Service"
+29. [ ] Verify page loads
+30. [ ] Click "Sign Out"
+31. [ ] Verify redirected to login
+32. [ ] ✅ **ALL TESTS PASSED**
+
+---
+
+## 📊 Test Results
+
+| Test Category | Status | Notes |
+|--------------|--------|-------|
+| Authentication | ⬜ Not Tested | |
+| Resume Management | ⬜ Not Tested | |
+| Job Search | ⬜ Not Tested | |
+| Job Selection | ⬜ Not Tested | |
+| Email Generation | ⬜ Not Tested | |
+| History | ⬜ Not Tested | |
+| Legal Pages | ⬜ Not Tested | |
+| UI/UX | ⬜ Not Tested | |
+| Security | ⬜ Not Tested | |
+| Error Handling | ⬜ Not Tested | |
+| End-to-End | ⬜ Not Tested | |
+
+**Legend:**
+- ⬜ Not Tested
+- ✅ Passed
+- ❌ Failed
+- ⚠️ Partial / Needs Work
+
+---
+
+## 🐞 Bug Report Template
+
+If you find bugs during testing, document them here:
+
+### Bug #1
+- **Category:** [Auth / Resume / Jobs / Email / History / UI]
+- **Severity:** [Critical / High / Medium / Low]
+- **Description:** What happened?
+- **Steps to Reproduce:**
+  1. Step 1
+  2. Step 2
+  3. Step 3
+- **Expected Behavior:** What should happen?
+- **Actual Behavior:** What actually happened?
+- **Screenshots:** (if applicable)
+- **Browser:** [Chrome / Firefox / Safari]
+- **Device:** [Desktop / Mobile / Tablet]
+
+---
+
+## ✅ Sign-off
+
+**Tested By:** ___________________
+**Date:** ___________________
+**Overall Status:** ⬜ Ready for Production | ⬜ Needs Fixes
+**Notes:**
+
+---
+
+**Happy Testing! 🎉**

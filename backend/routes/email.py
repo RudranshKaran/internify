@@ -44,7 +44,7 @@ async def send_email(
         # Save email record to database
         email_record = await supabase_service.save_email({
             "user_id": user_id,
-            "job_id": request.job_id,
+            "internship_id": request.internship_id,
             "subject": request.subject,
             "body": request.body,
             "recipient_email": request.recipient_email,

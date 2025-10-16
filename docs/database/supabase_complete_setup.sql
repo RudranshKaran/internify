@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Jobs table
-CREATE TABLE IF NOT EXISTS jobs (
+-- Internships table
+CREATE TABLE IF NOT EXISTS internships (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     company TEXT NOT NULL,
@@ -31,13 +31,13 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 
 -- Create index on company for faster searches
-CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company);
+CREATE INDEX IF NOT EXISTS idx_internships_company ON internships(company);
 
 -- Emails table
 CREATE TABLE IF NOT EXISTS emails (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    job_id UUID REFERENCES jobs(id) ON DELETE SET NULL,
+    internship_id UUID REFERENCES internships(id) ON DELETE SET NULL,
     subject TEXT NOT NULL,
     body TEXT NOT NULL,
     sent_at TIMESTAMP DEFAULT NOW(),
@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_resumes_user_uploaded ON resumes(user_id, uploade
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE emails ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resumes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
 
 -- ===================================================================
 -- 3. CREATE RLS POLICIES FOR TABLES
@@ -107,15 +107,15 @@ CREATE POLICY "Users can insert own resumes" ON resumes
     FOR INSERT
     WITH CHECK (auth.uid()::text = user_id::text);
 
--- Jobs Policies
-DROP POLICY IF EXISTS "Authenticated users can read jobs" ON jobs;
-CREATE POLICY "Authenticated users can read jobs" ON jobs
+-- Internships Policies
+DROP POLICY IF EXISTS "Authenticated users can read internships" ON internships;
+CREATE POLICY "Authenticated users can read internships" ON internships
     FOR SELECT
     TO authenticated
     USING (true);
 
-DROP POLICY IF EXISTS "Service role can insert jobs" ON jobs;
-CREATE POLICY "Service role can insert jobs" ON jobs
+DROP POLICY IF EXISTS "Service role can insert internships" ON internships;
+CREATE POLICY "Service role can insert internships" ON internships
     FOR INSERT
     WITH CHECK (true);
 
@@ -184,7 +184,7 @@ USING (
 SELECT 'Tables created:' as message;
 SELECT table_name FROM information_schema.tables 
 WHERE table_schema = 'public' 
-AND table_name IN ('users', 'resumes', 'jobs', 'emails');
+AND table_name IN ('users', 'resumes', 'internships', 'emails');
 
 -- Verify bucket was created
 SELECT 'Storage bucket created:' as message;

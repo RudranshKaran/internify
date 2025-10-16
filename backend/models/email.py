@@ -11,13 +11,13 @@ class EmailBase(BaseModel):
 
 class EmailCreate(EmailBase):
     user_id: str
-    job_id: Optional[str] = None
+    internship_id: Optional[str] = None
 
 
 class EmailResponse(EmailBase):
     id: str
     user_id: str
-    job_id: Optional[str] = None
+    internship_id: Optional[str] = None
     sent_at: datetime
     status: str = "sent"
 
@@ -26,14 +26,14 @@ class EmailResponse(EmailBase):
 
 
 class EmailGenerateRequest(BaseModel):
-    job_description: str
+    internship_description: str
     resume_text: str
-    job_title: str
+    internship_title: str
     company_name: str
 
 
 class EmailSendRequest(BaseModel):
-    job_id: str
+    internship_id: str
     recipient_email: EmailStr
     subject: str
     body: str

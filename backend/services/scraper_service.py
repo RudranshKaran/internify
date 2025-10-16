@@ -7,7 +7,7 @@ load_dotenv()
 
 
 class ScraperService:
-    """Service for scraping job listings using SerpAPI"""
+    """Service for scraping internship listings using SerpAPI"""
     
     def __init__(self):
         self.api_key = os.getenv("SERPAPI_KEY")
@@ -17,22 +17,22 @@ class ScraperService:
         
         self.base_url = "https://serpapi.com/search"
     
-    async def search_linkedin_jobs(
+    async def search_internships(
         self,
         query: str,
         location: Optional[str] = None,
         limit: int = 10
     ) -> List[Dict[str, Any]]:
         """
-        Search for job listings on LinkedIn via SerpAPI
+        Search for internship listings on LinkedIn via SerpAPI
         
         Args:
-            query: Job search query (e.g., "Software Engineer Intern")
+            query: Internship search query (e.g., "Software Engineer Intern")
             location: Location filter (e.g., "San Francisco, CA")
             limit: Maximum number of results to return
         
         Returns:
-            List of job dictionaries
+            List of internship dictionaries
         """
         
         try:
@@ -55,24 +55,24 @@ class ScraperService:
             data = response.json()
             
             # Parse results
-            jobs = self._parse_job_results(data)
+            internships = self._parse_internship_results(data)
             
-            return jobs[:limit]
+            return internships[:limit]
         
         except Exception as e:
-            print(f"Error searching jobs: {e}")
+            print(f"Error searching internships: {e}")
             return []
     
-    def _parse_job_results(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Parse SerpAPI response into job dictionaries"""
+    def _parse_internship_results(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Parse SerpAPI response into internship dictionaries"""
         
-        jobs = []
+        internships = []
         
         if "jobs_results" not in data:
-            return jobs
+            return internships
         
         for job in data["jobs_results"]:
-            parsed_job = {
+            parsed_internship = {
                 "title": job.get("title", ""),
                 "company": job.get("company_name", ""),
                 "location": job.get("location", ""),
@@ -83,12 +83,12 @@ class ScraperService:
                 "salary": self._extract_salary(job),
             }
             
-            jobs.append(parsed_job)
+            internships.append(parsed_internship)
         
-        return jobs
+        return internships
     
     def _extract_salary(self, job: Dict[str, Any]) -> Optional[str]:
-        """Extract salary information from job listing"""
+        """Extract salary information from internship listing"""
         
         extensions = job.get("detected_extensions", {})
         
@@ -107,21 +107,21 @@ class ScraperService:
         
         return None
     
-    async def get_job_details(self, job_id: str) -> Optional[Dict[str, Any]]:
+    async def get_internship_details(self, internship_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get detailed information about a specific job
+        Get detailed information about a specific internship
         
         Args:
-            job_id: SerpAPI job ID
+            internship_id: SerpAPI internship ID
         
         Returns:
-            Detailed job dictionary or None
+            Detailed internship dictionary or None
         """
         
         try:
             params = {
                 "engine": "google_jobs_listing",
-                "q": job_id,
+                "q": internship_id,
                 "api_key": self.api_key,
             }
             
@@ -142,7 +142,7 @@ class ScraperService:
             return None
         
         except Exception as e:
-            print(f"Error fetching job details: {e}")
+            print(f"Error fetching internship details: {e}")
             return None
     
     async def search_by_company(
@@ -151,18 +151,18 @@ class ScraperService:
         role: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Search for jobs at a specific company
+        Search for internships at a specific company
         
         Args:
             company_name: Name of the company
             role: Optional role filter
         
         Returns:
-            List of job dictionaries
+            List of internship dictionaries
         """
         
         query = f"{role + ' at ' if role else ''}{company_name}"
-        return await self.search_linkedin_jobs(query)
+        return await self.search_internships(query)
 
 
 # Singleton instance

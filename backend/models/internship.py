@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 
 
-class JobBase(BaseModel):
+class InternshipBase(BaseModel):
     title: str
     company: str
     link: Optional[str] = None
@@ -12,11 +12,11 @@ class JobBase(BaseModel):
     posted_at: Optional[datetime] = None
 
 
-class JobCreate(JobBase):
+class InternshipCreate(InternshipBase):
     pass
 
 
-class JobResponse(JobBase):
+class InternshipResponse(InternshipBase):
     id: str
     created_at: datetime
 
@@ -24,7 +24,7 @@ class JobResponse(JobBase):
         from_attributes = True
 
 
-class JobSearchQuery(BaseModel):
+class InternshipSearchQuery(BaseModel):
     role: str
     location: Optional[str] = None
     limit: int = 10

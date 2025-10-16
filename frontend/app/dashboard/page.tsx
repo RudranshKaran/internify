@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { resumeAPI, jobsAPI } from '@/lib/api'
+import { resumeAPI, internshipsAPI } from '@/lib/api'
 import { toast } from '@/components/Toast'
 import ResumeUploader from '@/components/ResumeUploader'
-import JobCard from '@/components/JobCard'
+import InternshipCard from '@/components/InternshipCard'
 import Loader from '@/components/Loader'
 import { Search } from 'lucide-react'
 
@@ -15,8 +15,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [resume, setResume] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [jobs, setJobs] = useState<any[]>([])
-  const [selectedJob, setSelectedJob] = useState<any>(null)
+  const [internships, setInternships] = useState<any[]>([])
+  const [selectedInternship, setSelectedInternship] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [checking, setChecking] = useState(true)
@@ -120,24 +120,51 @@ export default function DashboardPage() {
 
     setLoading(true)
     try {
-      const response = await jobsAPI.search(searchQuery)
-      setJobs(response.data.jobs || [])
-      if (response.data.jobs?.length === 0) {
-        toast.info('No jobs found. Try different keywords.')
+      console.log('Dashboard: Searching for internships with query:', searchQuery)
+      const response = await internshipsAPI.search(searchQuery)
+      console.log('Dashboard: Internship search response:', response.data)
+      setInternships(response.data.internships || [])
+      if (response.data.internships?.length === 0) {
+        toast.info('No internships found. Try different keywords.')
+      } else {
+        toast.success(`Found ${response.data.internships.length} internships!`)
       }
     } catch (error: any) {
-      toast.error('Failed to search jobs')
+      console.error('Dashboard: Internship search error:', error)
+      console.error('Dashboard: Error response:', error.response?.data)
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to search internships'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleJobSelect = (job: any) => {
-    setSelectedJob(job)
-    // Store selected job in localStorage and navigate
-    localStorage.setItem('selectedJob', JSON.stringify(job))
+  const handleInternshipSelect = (internship: any) => {
+    setSelectedInternship(internship)
+    // Store selected internship in localStorage and navigate
+    localStorage.setItem('selectedInternship', JSON.stringify(internship))
     localStorage.setItem('resumeText', resume?.extracted_text || '')
     router.push('/email-preview')
+  }
+
+  const handleResumeDelete = async () => {
+    if (!resume?.id) {
+      toast.error('No resume to delete')
+      return
+    }
+
+    try {
+      console.log('Dashboard: Deleting resume:', resume.id)
+      await resumeAPI.delete(resume.id)
+      setResume(null)
+      setInternships([]) // Clear internship results
+      setSelectedInternship(null)
+      toast.success('Resume deleted successfully!')
+    } catch (error: any) {
+      console.error('Dashboard: Resume delete failed:', error)
+      const errorMessage = error.response?.data?.detail || error.message || 'Failed to delete resume'
+      toast.error(errorMessage)
+    }
   }
 
   // Show loading while checking authentication
@@ -158,15 +185,16 @@ export default function DashboardPage() {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Upload Your Resume</h2>
         <ResumeUploader
           onUpload={handleResumeUpload}
+          onDelete={handleResumeDelete}
           isUploading={uploading}
           uploadedFileName={resume?.file_path?.split('/').pop()}
         />
       </div>
 
-      {/* Job Search Section */}
+      {/* Internship Search Section */}
       {resume && (
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Search for Jobs</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Search for Internships</h2>
           <form onSubmit={handleSearch} className="flex gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -183,36 +211,72 @@ export default function DashboardPage() {
               disabled={loading}
               className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50"
             >
-              {loading ? 'Searching...' : 'Search Jobs'}
+              {loading ? 'Searching...' : 'Search Internships'}
             </button>
           </form>
         </div>
       )}
 
-      {/* Job Results */}
-      {jobs.length > 0 && (
+      {/* Internship Results */}
+      {internships.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Select a Job</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">3. Select an Internship to Apply</h2>
+            {selectedInternship && (
+              <button
+                onClick={() => handleInternshipSelect(selectedInternship)}
+                className="px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:opacity-90 transition-all font-medium shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <span>Generate Email</span>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            )}
+          </div>
           {loading ? (
-            <Loader text="Searching for jobs..." />
+            <Loader text="Searching for internships..." />
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {jobs.map((job, index) => (
-                <JobCard
-                  key={index}
-                  job={job}
-                  onSelect={handleJobSelect}
-                  selected={selectedJob?.id === job.id}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {internships.map((internship, index) => (
+                  <InternshipCard
+                    key={index}
+                    internship={internship}
+                    onSelect={setSelectedInternship}
+                    selected={selectedInternship?.title === internship.title && selectedInternship?.company === internship.company}
+                  />
+                ))}
+              </div>
+              {selectedInternship && (
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Internship Selected: {selectedInternship.title}</p>
+                      <p className="text-sm text-gray-600">at {selectedInternship.company}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleInternshipSelect(selectedInternship)}
+                    className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    Continue →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
 
       {!resume && (
         <div className="text-center py-12 text-gray-500">
-          <p>Upload your resume to start searching for jobs</p>
+          <p>Upload your resume to start searching for internships</p>
         </div>
       )}
     </div>

@@ -1,11 +1,13 @@
 # Internify - AI-Powered Internship Application Platform
 
-Internify is a modern, full-stack web platform that automates the entire internship application process. It helps users send personalized cold emails to companies by leveraging AI, real-time job scraping, and automated email outreach.
+Internify is a modern, full-stack web platform that automates the entire internship application process. It helps users send personalized cold emails to companies by leveraging AI, real-time internship scraping, and automated email outreach.
 
 ![Tech Stack](https://img.shields.io/badge/Next.js-14-black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python-green)
 ![Supabase](https://img.shields.io/badge/Supabase-Database-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue)
+
+> 📚 **Documentation**: All project documentation is organized in the [`docs/`](./docs) folder. Start with [`docs/README.md`](./docs/README.md) for navigation.
 
 ---
 
@@ -13,7 +15,7 @@ Internify is a modern, full-stack web platform that automates the entire interns
 
 - 🔐 **Secure Authentication** - Supabase Auth with JWT validation
 - 📄 **Resume Upload & Parsing** - Extract key information from PDF resumes
-- 🔍 **Real-Time Job Search** - Fetch latest job postings from LinkedIn via SerpAPI
+- 🔍 **Real-Time Internship Search** - Fetch latest internship postings from LinkedIn via SerpAPI
 - 🤖 **AI Email Generation** - Personalized cold emails using Groq/Gemini LLM
 - ✉️ **Automated Email Sending** - Send professional emails via Resend API
 - 📊 **Email History Dashboard** - Track all sent applications
@@ -56,14 +58,14 @@ internify/
 │   │
 │   ├── models/              # Pydantic models
 │   │   ├── user.py
-│   │   ├── job.py
+│   │   ├── internship.py
 │   │   ├── email.py
 │   │   └── resume.py
 │   │
 │   ├── routes/              # API endpoints
 │   │   ├── auth.py
 │   │   ├── resume.py
-│   │   ├── jobs.py
+│   │   ├── internships.py
 │   │   ├── llm.py
 │   │   ├── email.py
 │   │   └── utils.py
@@ -84,7 +86,7 @@ internify/
     │
     ├── components/          # React components
     │   ├── Navbar.tsx
-    │   ├── JobCard.tsx
+    │   ├── InternshipCard.tsx
     │   ├── ResumeUploader.tsx
     │   ├── EmailPreview.tsx
     │   ├── Loader.tsx
@@ -198,9 +200,9 @@ CREATE TABLE users (
 );
 ```
 
-### Jobs Table
+### Internships Table
 ```sql
-CREATE TABLE jobs (
+CREATE TABLE internships (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     company TEXT NOT NULL,
@@ -217,7 +219,7 @@ CREATE TABLE jobs (
 CREATE TABLE emails (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id),
-    job_id UUID REFERENCES jobs(id),
+    internship_id UUID REFERENCES internships(id),
     subject TEXT NOT NULL,
     body TEXT NOT NULL,
     sent_at TIMESTAMP DEFAULT NOW(),
@@ -247,8 +249,8 @@ CREATE TABLE resumes (
 ### Resume
 - `POST /resume/upload` - Upload and parse resume PDF
 
-### Jobs
-- `GET /jobs/search?role={role}` - Search for job listings
+### Internships
+- `GET /internships/search?role={role}` - Search for internship listings
 
 ### LLM
 - `POST /llm/generate-email` - Generate personalized email

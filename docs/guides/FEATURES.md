@@ -7,7 +7,7 @@
 - [x] Supabase integration (database + auth + storage)
 - [x] JWT authentication with Supabase
 - [x] Resume upload and PDF text extraction
-- [x] Job scraping with SerpAPI
+- [x] Internship scraping with SerpAPI
 - [x] AI email generation with Groq/Gemini
 - [x] Email sending with Resend API
 - [x] Email history tracking
@@ -23,7 +23,7 @@
 - [x] Landing page
 - [x] Authentication (login/signup)
 - [x] Dashboard with resume upload
-- [x] Job search interface
+- [x] Internship search interface
 - [x] Email preview and editor
 - [x] Email history page
 - [x] Toast notifications
@@ -32,7 +32,7 @@
 
 #### Components
 - [x] Navbar with auth state
-- [x] Job cards
+- [x] Internship cards
 - [x] Resume uploader (drag & drop)
 - [x] Email preview
 - [x] Loader
@@ -40,7 +40,7 @@
 
 #### Database
 - [x] Users table
-- [x] Jobs table
+- [x] Internships table
 - [x] Emails table
 - [x] Resumes table
 - [x] Storage bucket for resumes

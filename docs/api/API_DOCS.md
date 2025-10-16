@@ -71,32 +71,32 @@ Get user's most recent resume
 
 ---
 
-### 💼 Jobs
+### 💼 Internships
 
-#### GET `/jobs/search`
-Search for job listings
+#### GET `/internships/search`
+Search for internship listings
 
 **Query Parameters:**
-- `role` (required): Job title/role
+- `role` (required): Internship title/role
 - `location` (optional): Location filter
 - `limit` (optional, default=10): Max results (1-50)
 
 **Example:**
 ```
-GET /jobs/search?role=Software Engineer Intern&location=San Francisco&limit=20
+GET /internships/search?role=Software Engineer Intern&location=San Francisco&limit=20
 ```
 
 **Response:**
 ```json
 {
   "success": true,
-  "jobs": [
+  "internships": [
     {
       "id": "uuid",
       "title": "Software Engineer Intern",
       "company": "Tech Corp",
       "location": "San Francisco, CA",
-      "description": "Job description...",
+      "description": "Internship description...",
       "link": "https://...",
       "posted_at": "2024-01-15T10:30:00Z"
     }
@@ -105,14 +105,14 @@ GET /jobs/search?role=Software Engineer Intern&location=San Francisco&limit=20
 }
 ```
 
-#### GET `/jobs/{job_id}`
-Get specific job details
+#### GET `/internships/{internship_id}`
+Get specific internship details
 
 **Response:**
 ```json
 {
   "success": true,
-  "job": {
+  "internship": {
     "id": "uuid",
     "title": "Software Engineer Intern",
     "company": "Tech Corp",
@@ -132,9 +132,9 @@ Generate personalized cold email using AI
 **Request Body:**
 ```json
 {
-  "job_description": "We're looking for...",
+  "internship_description": "We're looking for...",
   "resume_text": "My resume content...",
-  "job_title": "Software Engineer Intern",
+  "internship_title": "Software Engineer Intern",
   "company_name": "Tech Corp"
 }
 ```
@@ -161,7 +161,7 @@ Send cold email to company
 **Request Body:**
 ```json
 {
-  "job_id": "uuid",
+  "internship_id": "uuid",
   "recipient_email": "hr@company.com",
   "subject": "Application for...",
   "body": "Email content..."
@@ -199,7 +199,7 @@ Get user's email history
       "recipient_email": "hr@company.com",
       "sent_at": "2024-01-15T10:30:00Z",
       "status": "sent",
-      "jobs": {
+      "internships": {
         "title": "Software Engineer Intern",
         "company": "Tech Corp",
         "link": "https://..."
@@ -241,9 +241,9 @@ All endpoints return errors in this format:
 
 ## Testing with cURL
 
-### Example: Search for jobs
+### Example: Search for internships
 ```bash
-curl -X GET "http://localhost:8000/jobs/search?role=Software%20Engineer%20Intern" \
+curl -X GET "http://localhost:8000/internships/search?role=Software%20Engineer%20Intern" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -253,9 +253,9 @@ curl -X POST "http://localhost:8000/llm/generate-email" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "job_description": "Looking for a passionate developer",
+    "internship_description": "Looking for a passionate developer",
     "resume_text": "My skills include...",
-    "job_title": "Software Engineer",
+    "internship_title": "Software Engineer",
     "company_name": "Tech Corp"
   }'
 ```

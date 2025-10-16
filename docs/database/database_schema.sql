@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Jobs table
-CREATE TABLE IF NOT EXISTS jobs (
+-- Internships table
+CREATE TABLE IF NOT EXISTS internships (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     company TEXT NOT NULL,
@@ -25,13 +25,13 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 
 -- Create index on company for faster searches
-CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company);
+CREATE INDEX IF NOT EXISTS idx_internships_company ON internships(company);
 
 -- Emails table
 CREATE TABLE IF NOT EXISTS emails (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    job_id UUID REFERENCES jobs(id) ON DELETE SET NULL,
+    internship_id UUID REFERENCES internships(id) ON DELETE SET NULL,
     subject TEXT NOT NULL,
     body TEXT NOT NULL,
     sent_at TIMESTAMP DEFAULT NOW(),
@@ -59,7 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_resumes_user_uploaded ON resumes(user_id, uploade
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE emails ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resumes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE internships ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 
@@ -93,14 +93,14 @@ CREATE POLICY "Users can insert own resumes" ON resumes
     FOR INSERT
     WITH CHECK (auth.uid()::text = user_id::text);
 
--- Jobs: All authenticated users can read jobs
-CREATE POLICY "Authenticated users can read jobs" ON jobs
+-- Internships: All authenticated users can read internships
+CREATE POLICY "Authenticated users can read internships" ON internships
     FOR SELECT
     TO authenticated
     USING (true);
 
--- Jobs: Service role can insert jobs
-CREATE POLICY "Service role can insert jobs" ON jobs
+-- Internships: Service role can insert internships
+CREATE POLICY "Service role can insert internships" ON internships
     FOR INSERT
     WITH CHECK (true);
 
@@ -128,7 +128,7 @@ USING (
     (storage.foldername(name))[1] = auth.uid()::text
 );
 
--- Optional: Create a view for email history with job details
+-- Optional: Create a view for email history with internship details
 CREATE OR REPLACE VIEW email_history AS
 SELECT 
     e.id,
@@ -138,12 +138,12 @@ SELECT
     e.recipient_email,
     e.sent_at,
     e.status,
-    j.title as job_title,
-    j.company,
-    j.location,
-    j.link as job_link
+    i.title as internship_title,
+    i.company,
+    i.location,
+    i.link as internship_link
 FROM emails e
-LEFT JOIN jobs j ON e.job_id = j.id
+LEFT JOIN internships i ON e.internship_id = i.id
 ORDER BY e.sent_at DESC;
 
 -- Grant access to the view
@@ -151,7 +151,7 @@ GRANT SELECT ON email_history TO authenticated;
 
 -- Comments for documentation
 COMMENT ON TABLE users IS 'User accounts from Supabase Auth';
-COMMENT ON TABLE jobs IS 'Job postings scraped from LinkedIn/SerpAPI';
+COMMENT ON TABLE internships IS 'Internship postings scraped from LinkedIn/SerpAPI';
 COMMENT ON TABLE emails IS 'Sent email applications with tracking';
 COMMENT ON TABLE resumes IS 'User uploaded resumes with extracted text';
 COMMENT ON COLUMN resumes.extracted_text IS 'Text extracted from PDF for AI processing';

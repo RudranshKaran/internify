@@ -88,10 +88,10 @@ export default function HistoryPage() {
                     {email.subject}
                   </h3>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                    {email.jobs && (
+                    {email.internships && (
                       <div className="flex items-center">
                         <Building className="w-4 h-4 mr-1" />
-                        <span>{email.jobs.company}</span>
+                        <span>{email.internships.company}</span>
                       </div>
                     )}
                     <div className="flex items-center">
@@ -115,14 +115,14 @@ export default function HistoryPage() {
                 {email.body}
               </div>
 
-              {email.jobs?.link && (
+              {email.internships?.link && (
                 <a
-                  href={email.jobs.link}
+                  href={email.internships.link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-primary hover:text-primary/80 text-sm font-medium"
                 >
-                  View Job Posting
+                  View Internship Posting
                   <ExternalLink className="w-3 h-3 ml-1" />
                 </a>
               )}

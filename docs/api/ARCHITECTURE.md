@@ -17,7 +17,7 @@
 │                                                                   │
 │  ┌────────────────────────────────────────────────────────┐    │
 │  │              REUSABLE COMPONENTS                        │    │
-│  │  • Navbar  • JobCard  • ResumeUploader               │    │
+│  │  • Navbar  • InternshipCard  • ResumeUploader        │    │
 │  │  • EmailPreview  • Loader  • Toast                    │    │
 │  └────────────────────────────────────────────────────────┘    │
 │                                                                   │
@@ -39,7 +39,7 @@
 │  │                    API ROUTES                             │  │
 │  │  • /auth/verify       - JWT validation                   │  │
 │  │  • /resume/upload     - PDF upload & parse              │  │
-│  │  • /jobs/search       - Job search                       │  │
+│  │  • /internships/search - Internship search              │  │
 │  │  • /llm/generate      - AI email gen                     │  │
 │  │  • /email/send        - Send emails                      │  │
 │  │  • /email/history     - Track emails                     │  │
@@ -59,8 +59,8 @@
 │  │  ┌───────────────┐  ┌────────────────┐                  │  │
 │  │  │  Resend API   │  │ SerpAPI        │                  │  │
 │  │  │  Service      │  │ Service        │                  │  │
-│  │  │  • Send Email │  │ • Job Search   │                  │  │
-│  │  │  • Format     │  │ • Scrape       │                  │  │
+│  │  │  • Send Email │  │ • Internship   │                  │  │
+│  │  │  • Format     │  │   Search       │                  │  │
 │  │  └───────────────┘  └────────────────┘                  │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └───┬──────────────┬──────────────┬──────────────┬───────────────┘
@@ -69,11 +69,11 @@
     ▼              ▼              ▼              ▼
 ┌────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
 │Supabase│  │  Resend  │  │ SerpAPI  │  │Groq/Gemini│
-│(Cloud) │  │  (Email) │  │  (Jobs)  │  │   (AI)   │
+│(Cloud) │  │  (Email) │  │(Internshp)│  │   (AI)   │
 │        │  │          │  │          │  │          │
 │• Auth  │  │• Send    │  │• LinkedIn│  │• LLaMA-3 │
 │• DB    │  │• Track   │  │• Google  │  │• Gemini  │
-│• Store │  │          │  │  Jobs    │  │• Smart   │
+│• Store │  │          │  │ Internshp│  │• Smart   │
 └────────┘  └──────────┘  └──────────┘  └──────────┘
 
 
@@ -87,12 +87,12 @@ DATA FLOW:
    User uploads PDF → Frontend → Backend → Extract text (PyPDF2)
    → Store in Supabase Storage → Save metadata to DB
 
-3. JOB SEARCH
+3. INTERNSHIP SEARCH
    User enters role → Frontend → Backend → SerpAPI → Parse results
    → Save to DB → Return to Frontend → Display as cards
 
 4. EMAIL GENERATION
-   User selects job → Frontend → Backend → Fetch resume
+   User selects internship → Frontend → Backend → Fetch resume
    → Call Groq/Gemini API → Generate personalized email
    → Return to Frontend → Display in editor
 
@@ -116,15 +116,16 @@ DATABASE SCHEMA:
       │
       ▼
 ┌─────────────┐       ┌──────────────┐
-│   emails    │       │     jobs     │
+│   emails    │       │ internships  │
 ├─────────────┤       ├──────────────┤
 │ id (PK)     │       │ id (PK)      │
 │ user_id(FK) │       │ title        │
-│ job_id (FK) ├──────►│ company      │
-│ subject     │       │ link         │
-│ body        │       │ description  │
-│ recipient   │       │ location     │
-│ sent_at     │       └──────────────┘
+│intership_id ├──────►│ company      │
+│   (FK)      │       │ link         │
+│ subject     │       │ description  │
+│ body        │       │ location     │
+│ recipient   │       └──────────────┘
+│ sent_at     │
 │ status      │
 └─────────────┘
 
@@ -201,7 +202,7 @@ Backend:
 Database & Services:
 • Supabase (PostgreSQL + Auth + Storage)
 • Resend (Email API)
-• SerpAPI (Job scraping)
+• SerpAPI (Internship scraping)
 • Groq/Gemini (AI/LLM)
 
 Deployment:
@@ -213,15 +214,15 @@ Deployment:
 API ENDPOINT FLOW:
 ──────────────────
 
-GET  /                → Health check
-POST /auth/verify     → Validate JWT, create/get user
-POST /resume/upload   → Upload PDF, extract text, store
-GET  /resume/latest   → Get user's latest resume
-GET  /jobs/search     → Search jobs via SerpAPI
-GET  /jobs/{id}       → Get specific job details
-POST /llm/generate    → Generate email with AI
-POST /email/send      → Send email via Resend
-GET  /email/history   → Get user's sent emails
+GET  /                     → Health check
+POST /auth/verify          → Validate JWT, create/get user
+POST /resume/upload        → Upload PDF, extract text, store
+GET  /resume/latest        → Get user's latest resume
+GET  /internships/search   → Search internships via SerpAPI
+GET  /internships/{id}     → Get specific internship details
+POST /llm/generate         → Generate email with AI
+POST /email/send           → Send email via Resend
+GET  /email/history        → Get user's sent emails
 
 
 FREE TIER LIMITS:

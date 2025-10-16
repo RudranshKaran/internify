@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from routes import (
     auth_router,
     resume_router,
-    jobs_router,
+    internships_router,
     llm_router,
     email_router
 )
@@ -39,7 +39,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router)
 app.include_router(resume_router)
-app.include_router(jobs_router)
+app.include_router(internships_router)
 app.include_router(llm_router)
 app.include_router(email_router)
 

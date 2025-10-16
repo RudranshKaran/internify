@@ -17,7 +17,7 @@ export default function EmailPreviewPage() {
   const [sending, setSending] = useState(false)
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
-  const [job, setJob] = useState<any>(null)
+  const [internship, setInternship] = useState<any>(null)
   const [recipientEmail, setRecipientEmail] = useState('')
   const hasCheckedAuth = useRef(false)
   const isRedirecting = useRef(false)
@@ -36,41 +36,41 @@ export default function EmailPreviewPage() {
       return
     }
 
-    // Get job from localStorage
-    const jobData = localStorage.getItem('selectedJob')
+    // Get internship from localStorage
+    const internshipData = localStorage.getItem('selectedInternship')
     const resumeText = localStorage.getItem('resumeText')
 
-    if (!jobData) {
-      toast.error('No job selected')
+    if (!internshipData) {
+      toast.error('No internship selected')
       router.push('/dashboard')
       return
     }
 
-    const parsedJob = JSON.parse(jobData)
-    setJob(parsedJob)
+    const parsedInternship = JSON.parse(internshipData)
+    setInternship(parsedInternship)
 
     // Extract recipient email (you might need to implement email extraction logic)
-    const email = extractEmailFromJob(parsedJob)
+    const email = extractEmailFromInternship(parsedInternship)
     setRecipientEmail(email)
 
     // Generate email
-    await generateEmail(parsedJob, resumeText || '')
+    await generateEmail(parsedInternship, resumeText || '')
   }
 
-  const extractEmailFromJob = (job: any): string => {
+  const extractEmailFromInternship = (internship: any): string => {
     // Simple extraction - in real app, you'd need better logic
     // For now, use a placeholder
-    return job.company ? `hr@${job.company.toLowerCase().replace(/\s+/g, '')}.com` : 'contact@company.com'
+    return internship.company ? `hr@${internship.company.toLowerCase().replace(/\s+/g, '')}.com` : 'contact@company.com'
   }
 
-  const generateEmail = async (jobData: any, resumeText: string) => {
+  const generateEmail = async (internshipData: any, resumeText: string) => {
     setGenerating(true)
     try {
       const response = await llmAPI.generateEmail({
-        job_description: jobData.description || jobData.title,
+        internship_description: internshipData.description || internshipData.title,
         resume_text: resumeText,
-        job_title: jobData.title,
-        company_name: jobData.company,
+        internship_title: internshipData.title,
+        company_name: internshipData.company,
       })
 
       setSubject(response.data.subject)
@@ -85,16 +85,16 @@ export default function EmailPreviewPage() {
   }
 
   const handleRegenerate = async () => {
-    if (!job) return
+    if (!internship) return
     const resumeText = localStorage.getItem('resumeText') || ''
-    await generateEmail(job, resumeText)
+    await generateEmail(internship, resumeText)
   }
 
   const handleSend = async () => {
     setSending(true)
     try {
       await emailAPI.send({
-        job_id: job.id,
+        internship_id: internship.id,
         recipient_email: recipientEmail,
         subject,
         body,
@@ -139,10 +139,10 @@ export default function EmailPreviewPage() {
         Review and customize your AI-generated email before sending
       </p>
 
-      {job && (
+      {internship && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold text-gray-900">{job.title}</h3>
-          <p className="text-sm text-gray-600">{job.company}</p>
+          <h3 className="font-semibold text-gray-900">{internship.title}</h3>
+          <p className="text-sm text-gray-600">{internship.company}</p>
         </div>
       )}
 

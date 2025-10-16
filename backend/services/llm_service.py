@@ -40,24 +40,24 @@ class LLMService:
     async def generate_email(
         self,
         resume_text: str,
-        job_description: str,
-        job_title: str,
+        internship_description: str,
+        internship_title: str,
         company_name: str
     ) -> Optional[str]:
         """
-        Generate a personalized cold email for job application
+        Generate a personalized cold email for internship application
         
         Args:
             resume_text: Extracted text from user's resume
-            job_description: Job posting description
-            job_title: Title of the position
+            internship_description: Internship posting description
+            internship_title: Title of the internship position
             company_name: Name of the company
         
         Returns:
             Generated email text or None if generation fails
         """
         
-        prompt = self._create_prompt(resume_text, job_description, job_title, company_name)
+        prompt = self._create_prompt(resume_text, internship_description, internship_title, company_name)
         
         try:
             if self.use_groq:
@@ -68,26 +68,26 @@ class LLMService:
             print(f"Error generating email: {e}")
             return None
     
-    def _create_prompt(self, resume_text: str, job_description: str, job_title: str, company_name: str) -> str:
+    def _create_prompt(self, resume_text: str, internship_description: str, internship_title: str, company_name: str) -> str:
         """Create the prompt for LLM"""
-        return f"""You are a professional email writer helping someone apply for an internship or job.
+        return f"""You are a professional email writer helping a student apply for an internship.
 
-Generate a concise, personalized cold email for a job application.
+Generate a concise, personalized cold email for an internship application.
 
-**Job Details:**
-- Position: {job_title}
+**Internship Details:**
+- Position: {internship_title}
 - Company: {company_name}
-- Job Description: {job_description[:500]}
+- Internship Description: {internship_description[:500]}
 
 **Candidate Resume Summary:**
 {resume_text[:800]}
 
 **Requirements:**
-1. Professional yet friendly tone
+1. Professional yet friendly tone suitable for students
 2. 100-150 words maximum
 3. Include:
    - Brief greeting mentioning the company
-   - 1-2 sentences about why the candidate is interested
+   - 1-2 sentences about why the candidate is interested in this internship
    - 2-3 sentences highlighting relevant skills/experience from resume that match the job
    - Clear call-to-action (requesting interview/opportunity to discuss)
 4. Do NOT include:

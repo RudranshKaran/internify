@@ -62,6 +62,17 @@ async def upload_resume(
     
     try:
         user_id = extract_user_id(payload)
+        user_email = payload.get("email", "")
+        
+        # Ensure user exists in database (create if not exists)
+        existing_user = await supabase_service.get_user_by_id(user_id)
+        if not existing_user:
+            print(f"User {user_id} not found in database, creating...")
+            await supabase_service.create_user(
+                email=user_email, 
+                name=user_email.split('@')[0] if user_email else "User",
+                user_id=user_id
+            )
         
         # Read file content
         file_content = await file.read()
@@ -152,4 +163,57 @@ async def get_latest_resume(payload: dict = Depends(verify_token)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch resume: {str(e)}"
+        )
+
+
+@router.delete("/{resume_id}")
+async def delete_resume(resume_id: str, payload: dict = Depends(verify_token)):
+    """
+    Delete a resume from storage and database
+    
+    Args:
+        resume_id: Resume ID to delete
+        payload: Authenticated user token
+    
+    Returns:
+        Success confirmation
+    """
+    
+    try:
+        user_id = extract_user_id(payload)
+        
+        # Get resume to verify ownership and get file path
+        resume = await supabase_service.get_resume_by_id(resume_id, user_id)
+        
+        if not resume:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Resume not found or you don't have permission to delete it"
+            )
+        
+        # Delete from storage
+        file_path = resume.get("file_path")
+        if file_path:
+            await supabase_service.delete_file(bucket="resumes", file_path=file_path)
+        
+        # Delete from database
+        deleted = await supabase_service.delete_resume(resume_id, user_id)
+        
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete resume"
+            )
+        
+        return {
+            "success": True,
+            "message": "Resume deleted successfully"
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete resume: {str(e)}"
         )

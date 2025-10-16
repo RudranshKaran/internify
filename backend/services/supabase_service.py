@@ -37,13 +37,18 @@ class SupabaseService:
             print(f"Error fetching user: {e}")
             return None
     
-    async def create_user(self, email: str, name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    async def create_user(self, email: str, name: Optional[str] = None, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Create a new user"""
         try:
-            result = self.client.table("users").insert({
+            user_data = {
                 "email": email,
                 "name": name
-            }).execute()
+            }
+            # If user_id is provided (from auth), use it
+            if user_id:
+                user_data["id"] = user_id
+            
+            result = self.client.table("users").insert(user_data).execute()
             return result.data[0] if result.data else None
         except Exception as e:
             print(f"Error creating user: {e}")
@@ -77,23 +82,49 @@ class SupabaseService:
             print(f"Error fetching resume: {e}")
             return None
     
-    # Job Operations
-    async def save_job(self, job_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Save job posting to database"""
+    async def get_resume_by_id(self, resume_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get resume by ID for specific user"""
         try:
-            result = self.client.table("jobs").insert(job_data).execute()
+            result = self.client.table("resumes")\
+                .select("*")\
+                .eq("id", resume_id)\
+                .eq("user_id", user_id)\
+                .execute()
             return result.data[0] if result.data else None
         except Exception as e:
-            print(f"Error saving job: {e}")
+            print(f"Error fetching resume by ID: {e}")
             return None
     
-    async def get_job_by_id(self, job_id: str) -> Optional[Dict[str, Any]]:
-        """Get job by ID"""
+    async def delete_resume(self, resume_id: str, user_id: str) -> bool:
+        """Delete resume from database"""
         try:
-            result = self.client.table("jobs").select("*").eq("id", job_id).execute()
+            result = self.client.table("resumes")\
+                .delete()\
+                .eq("id", resume_id)\
+                .eq("user_id", user_id)\
+                .execute()
+            return True
+        except Exception as e:
+            print(f"Error deleting resume: {e}")
+            return False
+    
+    # Internship Operations
+    async def save_internship(self, internship_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Save internship posting to database"""
+        try:
+            result = self.client.table("internships").insert(internship_data).execute()
             return result.data[0] if result.data else None
         except Exception as e:
-            print(f"Error fetching job: {e}")
+            print(f"Error saving internship: {e}")
+            return None
+    
+    async def get_internship_by_id(self, internship_id: str) -> Optional[Dict[str, Any]]:
+        """Get internship by ID"""
+        try:
+            result = self.client.table("internships").select("*").eq("id", internship_id).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            print(f"Error fetching internship: {e}")
             return None
     
     # Email Operations
@@ -110,7 +141,7 @@ class SupabaseService:
         """Get user's email history"""
         try:
             result = self.client.table("emails")\
-                .select("*, jobs(*)")\
+                .select("*, internships(*)")\
                 .eq("user_id", user_id)\
                 .order("sent_at", desc=True)\
                 .limit(limit)\
@@ -124,7 +155,13 @@ class SupabaseService:
     async def upload_file(self, bucket: str, file_path: str, file_data: bytes) -> Optional[str]:
         """Upload file to Supabase Storage"""
         try:
-            result = self.client.storage.from_(bucket).upload(file_path, file_data)
+            # Upload with explicit content type for PDF files
+            file_options = {"content-type": "application/pdf"}
+            result = self.client.storage.from_(bucket).upload(
+                file_path, 
+                file_data,
+                file_options
+            )
             return file_path
         except Exception as e:
             print(f"Error uploading file: {e}")
@@ -138,6 +175,15 @@ class SupabaseService:
         except Exception as e:
             print(f"Error getting file URL: {e}")
             return None
+    
+    async def delete_file(self, bucket: str, file_path: str) -> bool:
+        """Delete file from Supabase Storage"""
+        try:
+            self.client.storage.from_(bucket).remove([file_path])
+            return True
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+            return False
 
 
 # Singleton instance
