@@ -10,6 +10,9 @@ class InternshipBase(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     posted_at: Optional[datetime] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_website: Optional[str] = None
 
 
 class InternshipCreate(InternshipBase):

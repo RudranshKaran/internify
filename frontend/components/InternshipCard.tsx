@@ -1,6 +1,6 @@
 'use client'
 
-import { MapPin, Building, ExternalLink, Calendar } from 'lucide-react'
+import { MapPin, Building, ExternalLink, Calendar, Mail, Phone, Globe } from 'lucide-react'
 import { formatDate, truncateText } from '@/lib/utils'
 
 interface InternshipCardProps {
@@ -12,6 +12,9 @@ interface InternshipCardProps {
     description?: string
     link?: string
     posted_at?: string
+    contact_email?: string
+    contact_phone?: string
+    contact_website?: string
   }
   onSelect?: (internship: any) => void
   selected?: boolean
@@ -79,6 +82,47 @@ export default function InternshipCard({ internship, onSelect, selected }: Inter
           <p className="text-sm text-gray-600 line-clamp-3">
             {truncateText(internship.description, 150)}
           </p>
+        )}
+
+        {/* Contact Information */}
+        {(internship.contact_email || internship.contact_phone || internship.contact_website) && (
+          <div className="flex flex-wrap gap-3 pt-2">
+            {internship.contact_email && (
+              <a
+                href={`mailto:${internship.contact_email}`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center space-x-1 text-xs text-gray-600 hover:text-primary bg-gray-50 px-2 py-1 rounded"
+                title="Send email"
+              >
+                <Mail className="w-3 h-3" />
+                <span className="truncate max-w-[150px]">{internship.contact_email}</span>
+              </a>
+            )}
+            {internship.contact_phone && (
+              <a
+                href={`tel:${internship.contact_phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center space-x-1 text-xs text-gray-600 hover:text-primary bg-gray-50 px-2 py-1 rounded"
+                title="Call"
+              >
+                <Phone className="w-3 h-3" />
+                <span>{internship.contact_phone}</span>
+              </a>
+            )}
+            {internship.contact_website && (
+              <a
+                href={internship.contact_website}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center space-x-1 text-xs text-gray-600 hover:text-primary bg-gray-50 px-2 py-1 rounded"
+                title="Visit website"
+              >
+                <Globe className="w-3 h-3" />
+                <span>Website</span>
+              </a>
+            )}
+          </div>
         )}
 
         {/* Footer */}
