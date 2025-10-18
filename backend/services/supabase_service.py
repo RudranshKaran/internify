@@ -115,7 +115,13 @@ class SupabaseService:
             result = self.client.table("internships").insert(internship_data).execute()
             return result.data[0] if result.data else None
         except Exception as e:
-            print(f"Error saving internship: {e}")
+            error_msg = str(e)
+            # Check if it's a schema cache error
+            if "PGRST205" in error_msg or "schema cache" in error_msg:
+                print(f"Error saving internship: Internships table not found in schema cache.")
+                print(f"Please run the database migration: docs/database/migration_add_contact_info.sql")
+            else:
+                print(f"Error saving internship: {e}")
             return None
     
     async def get_internship_by_id(self, internship_id: str) -> Optional[Dict[str, Any]]:

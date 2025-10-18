@@ -46,21 +46,28 @@ async def search_internships(
         saved_internships = []
         for internship in internships:
             try:
-                saved_internship = await supabase_service.save_internship({
+                # Prepare internship data with new contact fields
+                internship_data = {
                     "title": internship["title"],
                     "company": internship["company"],
                     "link": internship["link"],
                     "description": internship["description"],
-                    "location": internship.get("location")
-                })
+                    "location": internship.get("location"),
+                    "contact_email": internship.get("contact_email"),
+                    "contact_phone": internship.get("contact_phone"),
+                    "contact_website": internship.get("contact_website")
+                }
+                
+                saved_internship = await supabase_service.save_internship(internship_data)
                 
                 if saved_internship:
                     saved_internships.append(saved_internship)
                 else:
                     # If saving fails, still include in results
                     saved_internships.append(internship)
-            except:
+            except Exception as e:
                 # Continue even if one internship fails to save
+                print(f"Failed to save internship '{internship.get('title')}': {e}")
                 saved_internships.append(internship)
         
         return {

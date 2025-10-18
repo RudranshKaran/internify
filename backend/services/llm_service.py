@@ -32,7 +32,8 @@ class LLMService:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=self.gemini_api_key)
-                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                # Updated to use gemini-1.5-flash (current stable model)
+                self.gemini_model = genai.GenerativeModel('gemini-1.5-flash')
             except ImportError:
                 print("Google Generative AI library not installed. Install with: pip install google-generativeai")
                 self.use_gemini = False
