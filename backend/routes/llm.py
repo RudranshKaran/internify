@@ -56,12 +56,12 @@ async def generate_email(
         if not email_body:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate email. Please try again."
+                detail="Failed to generate email. This may be due to AI safety filters. Please try a different internship or check your resume content."
             )
         
         # Generate subject line
         subject = await llm_service.generate_subject_line(
-            job_title=request.job_title,
+            job_title=request.internship_title,
             company_name=request.company_name
         )
         
