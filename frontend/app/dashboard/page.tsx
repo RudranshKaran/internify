@@ -90,6 +90,8 @@ export default function DashboardPage() {
     setUploading(true)
     try {
       console.log('Dashboard: Uploading resume file:', file.name, file.size, 'bytes')
+      console.log('Dashboard: Backend URL:', process.env.NEXT_PUBLIC_BACKEND_URL)
+      
       const formData = new FormData()
       formData.append('file', file)
       
@@ -101,8 +103,19 @@ export default function DashboardPage() {
       console.error('Dashboard: Resume upload failed:', error)
       console.error('Dashboard: Error response:', error.response?.data)
       console.error('Dashboard: Error status:', error.response?.status)
+      console.error('Dashboard: Request URL:', error.config?.url)
+      console.error('Dashboard: Request method:', error.config?.method)
       
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to upload resume'
+      let errorMessage = 'Failed to upload resume'
+      
+      if (error.response?.status === 405) {
+        errorMessage = 'Upload endpoint not found. Please check backend configuration.'
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
       toast.error(errorMessage)
       
       // If it's an auth error, don't let the interceptor handle it
