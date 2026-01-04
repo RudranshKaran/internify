@@ -26,11 +26,23 @@ app = FastAPI(
 )
 
 # Configure CORS
-origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+# Allow multiple origins including local development and production
+origins = [
+    "http://localhost:3000",
+    "http://localhost:3001", 
+    "https://*.vercel.app",
+    "https://internify.vercel.app",
+    "https://internify-*.vercel.app",
+]
+
+# Get additional origins from environment variable
+env_origins = os.getenv("CORS_ORIGINS", "")
+if env_origins:
+    origins.extend(env_origins.split(","))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allow all origins for now
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
