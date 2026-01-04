@@ -1,15 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, Edit2, Send } from 'lucide-react'
+import { Copy, Check, Edit2 } from 'lucide-react'
 
 interface EmailPreviewProps {
   subject: string
   body: string
   onSubjectChange?: (subject: string) => void
   onBodyChange?: (body: string) => void
-  onSend?: () => void
-  isSending?: boolean
   recipientEmail?: string
 }
 
@@ -18,8 +16,6 @@ export default function EmailPreview({
   body,
   onSubjectChange,
   onBodyChange,
-  onSend,
-  isSending = false,
   recipientEmail,
 }: EmailPreviewProps) {
   const [copied, setCopied] = useState(false)
@@ -136,32 +132,29 @@ export default function EmailPreview({
       </div>
 
       {/* Footer */}
-      {onSend && (
-        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-lg">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-600">
-              Review and edit the email before sending
-            </p>
-            <button
-              onClick={onSend}
-              disabled={isSending}
-              className="flex items-center space-x-2 px-6 py-2.5 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {isSending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Sending...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>Send Email</span>
-                </>
-              )}
-            </button>
-          </div>
+      <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-lg">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-600">
+            Review and edit the email, then copy it to use in your email client
+          </p>
+          <button
+            onClick={handleCopy}
+            className="flex items-center space-x-2 px-6 py-2.5 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors font-medium"
+          >
+            {copied ? (
+              <>
+                <Check className="w-5 h-5" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-5 h-5" />
+                <span>Copy Email</span>
+              </>
+            )}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }

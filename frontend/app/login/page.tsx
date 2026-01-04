@@ -25,10 +25,14 @@ export default function LoginPage() {
     
     const checkSession = async () => {
       try {
-        // Small delay to ensure we're not in a redirect loop
-        await new Promise(resolve => setTimeout(resolve, 50))
+        // Add a timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 3000)
+        )
         
-        const { data: { session } } = await supabase.auth.getSession()
+        const sessionPromise = supabase.auth.getSession()
+        
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any
         console.log('Login page: Initial check, session:', session ? 'exists' : 'none')
         
         if (session && !isRedirecting.current && !isLoggingIn.current) {
@@ -41,6 +45,7 @@ export default function LoginPage() {
         }
       } catch (error) {
         console.error('Login page: Auth check error:', error)
+        // Always set checking to false so the page can be used
         setChecking(false)
       }
     }

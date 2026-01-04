@@ -18,8 +18,8 @@ export default function Home() {
     },
     {
       icon: <Mail className="w-6 h-6" />,
-      title: 'Automated Sending',
-      description: 'Send professional emails directly to companies with one click',
+      title: 'Easy Copy & Use',
+      description: 'Copy professionally crafted emails and use them in your preferred email client',
     },
     {
       icon: <Zap className="w-6 h-6" />,
@@ -32,7 +32,7 @@ export default function Home() {
     'Upload your resume',
     'Search for your dream role',
     'AI generates personalized email',
-    'Send and track applications',
+    'Copy and send applications',
   ]
 
   return (

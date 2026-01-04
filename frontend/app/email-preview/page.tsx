@@ -14,7 +14,6 @@ export default function EmailPreviewPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [sending, setSending] = useState(false)
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [internship, setInternship] = useState<any>(null)
@@ -90,24 +89,7 @@ export default function EmailPreviewPage() {
     await generateEmail(internship, resumeText)
   }
 
-  const handleSend = async () => {
-    setSending(true)
-    try {
-      await emailAPI.send({
-        internship_id: internship.id,
-        recipient_email: recipientEmail,
-        subject,
-        body,
-      })
 
-      toast.success('Email sent successfully!')
-      router.push('/history')
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to send email')
-    } finally {
-      setSending(false)
-    }
-  }
 
   if (loading || generating) {
     return (
@@ -136,7 +118,7 @@ export default function EmailPreviewPage() {
 
       <h1 className="text-3xl font-bold text-gray-900 mb-2">Email Preview</h1>
       <p className="text-gray-600 mb-8">
-        Review and customize your AI-generated email before sending
+        Review and customize your AI-generated email, then copy it to use in your email client
       </p>
 
       {internship && (
@@ -165,8 +147,6 @@ export default function EmailPreviewPage() {
         recipientEmail={recipientEmail}
         onSubjectChange={setSubject}
         onBodyChange={setBody}
-        onSend={handleSend}
-        isSending={sending}
       />
     </div>
   )

@@ -36,7 +36,7 @@ export default function TermsPage() {
             <li>Allows users to upload and store their resumes</li>
             <li>Searches for internship opportunities using third-party APIs</li>
             <li>Generates personalized application emails using AI</li>
-            <li>Sends emails on behalf of users to potential employers</li>
+            <li>Generates personalized cold emails for internship applications</li>
             <li>Maintains a history of sent applications</li>
           </ul>
         </section>
@@ -46,9 +46,9 @@ export default function TermsPage() {
           <p className="text-gray-700 mb-4">You agree to:</p>
           <ul className="list-disc pl-6 text-gray-700 space-y-2">
             <li>Provide accurate and truthful information in your resume</li>
-            <li>Review generated emails before sending</li>
+            <li>Review generated emails before copying and using them</li>
             <li>Use the service only for legitimate job application purposes</li>
-            <li>Not spam or misuse the email sending functionality</li>
+            <li>Not spam or misuse the email generation functionality</li>
             <li>Maintain the confidentiality of your account credentials</li>
             <li>Not use the service for any illegal or unauthorized purpose</li>
           </ul>
@@ -74,7 +74,7 @@ export default function TermsPage() {
           </p>
           <ul className="list-disc pl-6 text-gray-700 space-y-2">
             <li>AI-generated content may contain errors or inaccuracies</li>
-            <li>You are responsible for reviewing and approving all emails before sending</li>
+            <li>You are responsible for reviewing and approving all emails before copying and using them</li>
             <li>We do not guarantee the effectiveness of AI-generated emails</li>
             <li>The final content of sent emails is your responsibility</li>
           </ul>

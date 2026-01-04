@@ -43,5 +43,4 @@ Once running, visit:
 - `POST /llm/generate-email` - Generate personalized email
 
 ### Email
-- `POST /email/send` - Send email via Resend
-- `GET /email/history` - Get user's email history
+- `GET /email/history` - Get user's generated email history

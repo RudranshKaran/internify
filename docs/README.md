@@ -44,16 +44,17 @@ Database schemas, setup scripts, and migration guides.
 ---
 
 ### 📖 Guides (`guides/`)
-Setup instructions, quick starts, and feature documentation.
+Setup instructions, quick starts, feature documentation, and deployment.
 
 - **START_HERE.md** ⭐ - Main entry point after refactoring
+- **DEPLOYMENT_GUIDE.md** 🚀 - Complete production deployment guide (Railway + Vercel)
 - **DOCUMENTATION_INDEX.md** - Complete documentation map
 - **SETUP.md** - Detailed setup instructions
 - **QUICK_START.md** - Quick start guide
 - **FEATURES.md** - Feature checklist
 - **SUPABASE_SETUP.md** - Supabase-specific setup
 
-**Use when**: First-time setup, getting started, finding documentation
+**Use when**: First-time setup, getting started, finding documentation, deploying to production
 
 ---
 
@@ -119,8 +120,8 @@ Project status and testing documentation.
 3. 📡 Review: `api/API_DOCS.md` for new endpoints
 
 #### **Deploy the application**
-1. 🔧 Read: `refactoring/REFACTORING_COMPLETE.md` (Deployment section)
-2. 📖 Check: `guides/START_HERE.md` for checklist
+1. � Read: `guides/DEPLOYMENT_GUIDE.md` ⭐ - Complete deployment guide
+2. 📖 Check: `guides/START_HERE.md` for pre-deployment checklist
 3. 🧪 Use: Testing checklists before deploying
 
 #### **Integrate with the API**
@@ -144,9 +145,10 @@ Project status and testing documentation.
 4. 📡 `api/API_DOCS.md` - Learn the API
 
 ### For Deployment:
-1. ⭐ `guides/START_HERE.md` - Check status
-2. 🗄️ `database/DATABASE_MIGRATION_GUIDE.md` - Migrate DB
-3. 🔧 `refactoring/REFACTORING_COMPLETE.md` - Deploy guide
+1. 🚀 `guides/DEPLOYMENT_GUIDE.md` - Complete deployment walkthrough
+2. ⭐ `guides/START_HERE.md` - Check status
+3. 🗄️ `database/DATABASE_MIGRATION_GUIDE.md` - Migrate DB if needed
+4. 📋 Testing checklists - Verify everything
 4. 📋 Testing checklists - Verify everything
 
 ### For Understanding Changes:
@@ -166,8 +168,8 @@ Project status and testing documentation.
 | **Database Migration** | `database/DATABASE_MIGRATION_GUIDE.md` |
 | **First Setup** | `guides/SETUP.md` or `guides/QUICK_START.md` |
 | **Feature List** | `guides/FEATURES.md` |
+| **Production Deployment** | `guides/DEPLOYMENT_GUIDE.md` 🚀 |
 | **What Changed** | `refactoring/TERMINOLOGY_REFACTORING_COMPLETE.md` |
-| **Deployment** | `refactoring/REFACTORING_COMPLETE.md` |
 | **Testing** | `TESTING_CHECKLIST.md` (root) |
 | **Navigation** | `guides/DOCUMENTATION_INDEX.md` |
 
@@ -175,10 +177,10 @@ Project status and testing documentation.
 
 ## 📊 Documentation Statistics
 
-- **Total Files**: 20+
-- **Categories**: 5
-- **Lines of Documentation**: 5000+
-- **Last Updated**: October 16, 2025
+- **Total Files**: 25+
+- **Categories**: 5 (API, Database, Guides, Refactoring, Fixes)
+- **Lines of Documentation**: 6000+
+- **Last Updated**: January 4, 2026
 
 ---
 
@@ -205,9 +207,9 @@ Project status and testing documentation.
 - See `api/API_DOCS.md` for complete list
 
 ### Deployment
-- Backend and frontend code already updated
-- Database migration is the only manual step needed
-- Follow deployment guide in `refactoring/REFACTORING_COMPLETE.md`
+- Backend hosted on Railway, frontend on Vercel
+- Complete step-by-step guide in `guides/DEPLOYMENT_GUIDE.md`
+- Includes troubleshooting, monitoring, and cost estimates
 
 ---
 

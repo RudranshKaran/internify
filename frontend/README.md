@@ -87,7 +87,7 @@ frontend/
 - 📄 PDF resume upload and parsing
 - 🔍 Real-time job search
 - 🤖 AI-powered email generation
-- ✉️ One-click email sending
+- 📋 Easy copy & use functionality
 - 📊 Application tracking dashboard
 - 🎨 Beautiful, responsive UI
 - ⚡ Fast page loads with Next.js

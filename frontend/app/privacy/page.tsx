@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             <li><strong>Account Information:</strong> Email address, name, and authentication details</li>
             <li><strong>Resume Data:</strong> PDF files and extracted text content from your resume</li>
             <li><strong>Job Search History:</strong> Search queries and selected job postings</li>
-            <li><strong>Email Data:</strong> Generated emails, recipients, and sending history</li>
+            <li><strong>Email Data:</strong> Generated emails and their content</li>
             <li><strong>Usage Data:</strong> How you interact with our platform</li>
           </ul>
         </section>
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
             <li>Provide and maintain our service</li>
             <li>Generate personalized application emails using AI</li>
             <li>Search for relevant internship opportunities</li>
-            <li>Send application emails on your behalf</li>
+            <li>Generate personalized emails for your applications</li>
             <li>Improve and optimize our platform</li>
             <li>Communicate with you about your account</li>
           </ul>
@@ -68,7 +68,6 @@ export default function PrivacyPage() {
             <li><strong>Supabase:</strong> Database, authentication, and file storage</li>
             <li><strong>Google Gemini AI:</strong> Email generation</li>
             <li><strong>SerpAPI:</strong> Job search functionality</li>
-            <li><strong>Resend:</strong> Email delivery service</li>
           </ul>
         </section>
 

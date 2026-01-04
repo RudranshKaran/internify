@@ -17,8 +17,8 @@ Internify is a modern, full-stack web platform that automates the entire interns
 - 📄 **Resume Upload & Parsing** - Extract key information from PDF resumes
 - 🔍 **Real-Time Internship Search** - Fetch latest internship postings from LinkedIn via SerpAPI
 - 🤖 **AI Email Generation** - Personalized cold emails using Groq/Gemini LLM
-- ✉️ **Automated Email Sending** - Send professional emails via Resend API
-- 📊 **Email History Dashboard** - Track all sent applications
+- 📋 **Easy Copy & Use** - Copy generated emails to use in your email client
+- 📊 **Application History** - Track all generated email applications
 - 🎨 **Beautiful UI** - Modern design with Tailwind CSS and shadcn/ui
 - 📱 **Fully Responsive** - Works seamlessly on all devices
 
@@ -41,7 +41,6 @@ Internify is a modern, full-stack web platform that automates the entire interns
 - **Database:** PostgreSQL (Supabase)
 - **Authentication:** Supabase Auth
 - **File Storage:** Supabase Storage
-- **Email Service:** Resend API
 - **AI/LLM:** Groq API (LLaMA-3) / Gemini API
 - **Job Scraping:** SerpAPI
 
@@ -73,7 +72,7 @@ internify/
 │   └── services/            # Business logic
 │       ├── supabase_service.py
 │       ├── llm_service.py
-│       ├── resend_service.py
+
 │       └── scraper_service.py
 │
 └── frontend/                # Next.js Frontend
@@ -109,7 +108,6 @@ internify/
 - Python 3.11+
 - Supabase account
 - API Keys:
-  - Resend API key
   - SerpAPI key
   - Groq API key or Gemini API key
 
@@ -138,7 +136,6 @@ internify/
    SUPABASE_URL=your_supabase_url
    SUPABASE_ANON_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_KEY=your_supabase_service_key
-   RESEND_API_KEY=your_resend_api_key
    SERPAPI_KEY=your_serpapi_key
    GROQ_API_KEY=your_groq_api_key
    # OR
@@ -256,8 +253,7 @@ CREATE TABLE resumes (
 - `POST /llm/generate-email` - Generate personalized email
 
 ### Email
-- `POST /email/send` - Send email to company
-- `GET /email/history` - Get user's email history
+- `GET /email/history` - Get user's generated email history
 
 ---
 
@@ -292,7 +288,6 @@ Already cloud-hosted. Just configure connection strings.
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_KEY=
-RESEND_API_KEY=
 SERPAPI_KEY=
 GROQ_API_KEY=
 ```
@@ -314,8 +309,8 @@ NEXT_PUBLIC_BACKEND_URL=
 4. **Select Job** - Choose from real-time LinkedIn listings
 5. **Generate Email** - AI creates personalized cold email
 6. **Review & Edit** - Customize the generated email
-7. **Send** - Send email directly to company
-8. **Track** - View all sent emails in history dashboard
+7. **Copy** - Copy email to use in your email client
+8. **Track** - View all generated emails in history dashboard
 
 ---
 
@@ -358,7 +353,6 @@ Built with ❤️ for automating internship applications
 ## Acknowledgments
 
 - Supabase for authentication and database
-- Resend for email delivery
 - Groq for AI email generation
 - SerpAPI for job scraping
 - Vercel for frontend hosting
