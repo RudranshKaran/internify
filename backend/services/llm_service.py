@@ -30,35 +30,39 @@ class LLMService:
         
         if self.use_gemini and not self.use_groq:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=self.gemini_api_key)
+                from google import genai
+                from google.genai import types
                 
-                # Store genai module for use in generation
-                self.genai = genai
+                # Initialize the client
+                self.genai_client = genai.Client(api_key=self.gemini_api_key)
                 
                 # Configure safety settings to be less restrictive for professional content
-                from google.generativeai.types import HarmCategory, HarmBlockThreshold
-                
-                # Store safety settings for use in generation calls
-                self.safety_settings = {
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
+                self.safety_settings = [
+                    types.SafetySetting(
+                        category='HARM_CATEGORY_HATE_SPEECH',
+                        threshold='BLOCK_NONE'
+                    ),
+                    types.SafetySetting(
+                        category='HARM_CATEGORY_HARASSMENT',
+                        threshold='BLOCK_NONE'
+                    ),
+                    types.SafetySetting(
+                        category='HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                        threshold='BLOCK_NONE'
+                    ),
+                    types.SafetySetting(
+                        category='HARM_CATEGORY_DANGEROUS_CONTENT',
+                        threshold='BLOCK_NONE'
+                    ),
+                ]
                 
                 # Use Gemini 2.5 Flash with system instructions to help with context
                 # This can help reduce false positives from safety filters
-                system_instruction = "You are a professional career counselor and email writer specializing in helping students write internship and job application emails. Your responses are always professional, constructive, and appropriate for workplace communication."
+                self.system_instruction = "You are a professional career counselor and email writer specializing in helping students write internship and job application emails. Your responses are always professional, constructive, and appropriate for workplace communication."
                 
-                self.gemini_model = genai.GenerativeModel(
-                    'gemini-2.5-flash',
-                    safety_settings=self.safety_settings,
-                    system_instruction=system_instruction
-                )
-                print("Successfully initialized Gemini with model: gemini-2.5-flash")
+                print("Successfully initialized Gemini with model: gemini-2.0-flash-exp")
             except ImportError:
-                print("Google Generative AI library not installed. Install with: pip install google-generativeai")
+                print("Google GenAI library not installed. Install with: pip install google-genai")
                 self.use_gemini = False
             except Exception as e:
                 print(f"Failed to initialize Gemini: {e}")
@@ -155,62 +159,38 @@ Write only the email body:"""
     async def _generate_with_gemini(self, prompt: str) -> Optional[str]:
         """Generate email using Gemini API"""
         try:
+            from google.genai import types
+            
             # Log the prompt for debugging (first 500 chars)
             print(f"Gemini prompt (truncated): {prompt[:500]}...")
             
-            # Add generation config for better control
-            generation_config = {
-                'temperature': 0.7,
-                'max_output_tokens': 500,
-            }
-            
-            # Try with safety settings passed explicitly
-            response = self.gemini_model.generate_content(
-                prompt,
-                generation_config=generation_config,
+            # Create generation config
+            config = types.GenerateContentConfig(
+                temperature=0.7,
+                max_output_tokens=500,
+                system_instruction=self.system_instruction,
                 safety_settings=self.safety_settings
             )
             
-            # Check if response was blocked by safety filters
-            if not response.candidates:
-                print("Gemini API: No candidates returned - attempting with simplified prompt")
-                # Try with a simpler, more direct prompt
-                return await self._generate_with_gemini_fallback(prompt)
+            # Generate content using the new API
+            response = self.genai_client.models.generate_content(
+                model='gemini-2.0-flash-exp',
+                contents=prompt,
+                config=config
+            )
             
-            candidate = response.candidates[0]
-            
-            # Check finish reason
-            # 0 = FINISH_REASON_UNSPECIFIED, 1 = STOP (success), 2 = SAFETY, 3 = RECITATION, 4 = OTHER
-            if candidate.finish_reason == 2:  # SAFETY
-                print(f"Gemini API: Response blocked by safety filters - attempting fallback")
-                print(f"Safety ratings: {candidate.safety_ratings}")
-                # Try fallback
-                return await self._generate_with_gemini_fallback(prompt)
-            elif candidate.finish_reason not in [0, 1]:  # Not STOP or UNSPECIFIED
-                print(f"Gemini API: Unexpected finish reason: {candidate.finish_reason}")
-                return None
-            
-            # Extract text safely
-            if hasattr(response, 'text') and response.text:
+            # Check if response has text
+            if response.text:
                 email_text = response.text.strip()
                 return email_text
             else:
-                print("Gemini API: No text in response")
-                return None
-                
-        except ValueError as e:
-            # Handle the specific ValueError for blocked responses
-            if "finish_reason" in str(e):
-                print(f"Gemini API: Response blocked - attempting fallback")
+                print("Gemini API: No text in response - attempting fallback")
                 return await self._generate_with_gemini_fallback(prompt)
-            else:
-                print(f"Gemini API error: {e}")
-            return None
+                
         except Exception as e:
             print(f"Gemini API error: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+            print("Attempting fallback...")
+            return await self._generate_with_gemini_fallback(prompt)
     
     async def _generate_with_gemini_fallback(self, original_prompt: str) -> Optional[str]:
         """Fallback method with a template-based approach to avoid safety filters"""

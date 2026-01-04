@@ -6,7 +6,7 @@ resend
 PyPDF2
 beautifulsoup4
 groq
-google-generativeai
+google-genai
 python-dotenv
 pydantic
 pydantic-settings
