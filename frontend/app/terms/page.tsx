@@ -21,7 +21,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
           <p className="text-gray-700 mb-4">
-            By accessing and using Internify ("the Service"), you accept and agree to be bound by the terms 
+            By accessing and using Internify (&ldquo;the Service&rdquo;), you accept and agree to be bound by the terms 
             and provision of this agreement. If you do not agree to abide by the above, please do not use 
             this service.
           </p>
@@ -96,7 +96,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Limitation of Liability</h2>
           <p className="text-gray-700 mb-4">
-            Internify is provided "as is" without warranties of any kind. We are not liable for:
+            Internify is provided &ldquo;as is&rdquo; without warranties of any kind. We are not liable for:
           </p>
           <ul className="list-disc pl-6 text-gray-700 space-y-2">
             <li>Job application outcomes or hiring decisions</li>
