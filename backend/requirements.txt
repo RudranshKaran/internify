@@ -10,6 +10,7 @@ google-generativeai
 python-dotenv
 pydantic
 pydantic-settings
+email-validator
 aiohttp
 python-multipart
 pyjwt
