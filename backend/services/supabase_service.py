@@ -22,10 +22,16 @@ class SupabaseService:
     async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
         try:
+            print(f"[SUPABASE] Fetching user by ID: {user_id}")
             result = self.client.table("users").select("*").eq("id", user_id).execute()
-            return result.data[0] if result.data else None
+            if result.data:
+                print(f"[SUPABASE] User found: {result.data[0].get('email')}")
+                return result.data[0]
+            else:
+                print(f"[SUPABASE] No user found with ID: {user_id}")
+                return None
         except Exception as e:
-            print(f"Error fetching user: {e}")
+            print(f"[SUPABASE] Error fetching user by ID: {e}")
             return None
     
     async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
@@ -38,7 +44,7 @@ class SupabaseService:
             return None
     
     async def create_user(self, email: str, name: Optional[str] = None, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """Create a new user"""
+        """Create a new user or return existing user if already exists"""
         try:
             user_data = {
                 "email": email,
@@ -50,6 +56,7 @@ class SupabaseService:
             
             print(f"[SUPABASE] Creating user with data: {user_data}")
             
+            # Try insert first
             result = self.client.table("users").insert(user_data).execute()
             
             if result.data:
@@ -59,7 +66,24 @@ class SupabaseService:
                 print(f"[SUPABASE] No data returned from user creation")
                 return None
         except Exception as e:
-            print(f"[SUPABASE] Error creating user: {type(e).__name__}: {str(e)}")
+            error_str = str(e)
+            print(f"[SUPABASE] Error creating user: {type(e).__name__}: {error_str}")
+            
+            # Check if it's a duplicate key error (user already exists)
+            if "duplicate key" in error_str.lower() or "already exists" in error_str.lower() or "unique" in error_str.lower():
+                print(f"[SUPABASE] User already exists, attempting to fetch existing user")
+                # User already exists, try to fetch it
+                if user_id:
+                    existing = await self.get_user_by_id(user_id)
+                    if existing:
+                        print(f"[SUPABASE] Found existing user: {existing}")
+                        return existing
+                # Try by email
+                existing = await self.get_user_by_email(email)
+                if existing:
+                    print(f"[SUPABASE] Found existing user by email: {existing}")
+                    return existing
+            
             import traceback
             print(f"[SUPABASE] Full traceback: {traceback.format_exc()}")
             return None

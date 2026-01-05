@@ -75,14 +75,23 @@ async def upload_resume(
                 name=user_email.split('@')[0] if user_email else "User",
                 user_id=user_id
             )
-            if created_user:
-                print(f"[RESUME] User created successfully: {created_user}")
+            if not created_user:
+                print(f"[RESUME] Failed to create user, checking if exists...")
+                # Try one more time to fetch - might be a race condition or RLS issue
+                existing_user = await supabase_service.get_user_by_id(user_id)
+                if not existing_user:
+                    # Check by email as fallback
+                    existing_user = await supabase_service.get_user_by_email(user_email)
+                    
+                if not existing_user:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to create user account in database. Please ensure you have proper database access and RLS policies are configured correctly. Check server logs for details."
+                    )
+                else:
+                    print(f"[RESUME] Found user after retry: {existing_user}")
             else:
-                print(f"[RESUME] Failed to create user")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to create user account in database"
-                )
+                print(f"[RESUME] User created successfully: {created_user}")
         else:
             print(f"[RESUME] User exists in database: {existing_user.get('email')}")
         
