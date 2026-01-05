@@ -32,6 +32,9 @@ export default function DashboardPage() {
       try {
         console.log('Dashboard: Starting auth check...')
         
+        // Clear any old localStorage data to prevent data leakage between users
+        localStorage.removeItem('selectedInternship')
+        
         // Use getUser() instead of getSession() - it's more reliable and validates the JWT
         const { data: { user }, error } = await supabase.auth.getUser()
         
@@ -156,7 +159,6 @@ export default function DashboardPage() {
     setSelectedInternship(internship)
     // Store selected internship in localStorage and navigate
     localStorage.setItem('selectedInternship', JSON.stringify(internship))
-    localStorage.setItem('resumeText', resume?.extracted_text || '')
     router.push('/email-preview')
   }
 

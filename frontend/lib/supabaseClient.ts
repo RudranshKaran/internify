@@ -28,6 +28,9 @@ export const getSession = async () => {
 
 // Helper function to sign out
 export const signOut = async () => {
+  // Clear localStorage to prevent data leakage between users
+  localStorage.removeItem('selectedInternship')
+  
   const { error } = await supabase.auth.signOut()
   return { error }
 }

@@ -37,7 +37,6 @@ export default function EmailPreviewPage() {
 
     // Get internship from localStorage
     const internshipData = localStorage.getItem('selectedInternship')
-    const resumeText = localStorage.getItem('resumeText')
 
     if (!internshipData) {
       toast.error('No internship selected')
@@ -52,8 +51,8 @@ export default function EmailPreviewPage() {
     const email = extractEmailFromInternship(parsedInternship)
     setRecipientEmail(email)
 
-    // Generate email
-    await generateEmail(parsedInternship, resumeText || '')
+    // Generate email - pass empty resume_text so backend fetches it from database for current user
+    await generateEmail(parsedInternship, '')
   }
 
   const extractEmailFromInternship = (internship: any): string => {
@@ -85,8 +84,8 @@ export default function EmailPreviewPage() {
 
   const handleRegenerate = async () => {
     if (!internship) return
-    const resumeText = localStorage.getItem('resumeText') || ''
-    await generateEmail(internship, resumeText)
+    // Pass empty string so backend fetches resume from database for current user
+    await generateEmail(internship, '')
   }
 
 

@@ -58,7 +58,7 @@ class LLMService:
                 
                 # Use Gemini 2.5 Flash with system instructions to help with context
                 # This can help reduce false positives from safety filters
-                self.system_instruction = "You are a professional career counselor and email writer specializing in helping students write internship and job application emails. Your responses are always professional, constructive, and appropriate for workplace communication."
+                self.system_instruction = "You are an expert cold email writer following the Internify Email Generation Specification. You write emails that maximize open rate, skim-read clarity, and reply probability. Your emails feel HUMAN, INTENTIONAL, and SPECIFIC—never mass-generated or robotic. You lead with value, use contractions, include exactly one strong proof, and end with lightweight CTAs. You avoid greetings, skill lists, and begging language. Your emails are always professional yet conversational, scoring 8/10+ on curiosity, proof strength, clarity, and human tone."
                 
                 print("Successfully initialized Gemini with model: gemini-2.0-flash-exp")
             except ImportError:
@@ -100,36 +100,74 @@ class LLMService:
             return None
     
     def _create_prompt(self, resume_text: str, internship_description: str, internship_title: str, company_name: str) -> str:
-        """Create the prompt for LLM"""
+        """Create the prompt for LLM following Internify Email Generation Specification"""
         # Sanitize inputs to avoid safety filter issues
-        resume_text = (resume_text or "").strip()[:800]
-        internship_description = (internship_description or "").strip()[:400]
+        resume_text = (resume_text or "").strip()[:1000]
+        internship_description = (internship_description or "").strip()[:500]
         internship_title = (internship_title or "").strip()
         company_name = (company_name or "").strip()
         
-        # Simplified prompt that's less likely to trigger safety filters
-        return f"""Write a professional internship application email.
+        return f"""# CRITICAL: Follow Internify Email Generation Specification
 
+Generate a cold email for an internship that feels HUMAN and INTENTIONAL.
+
+## Context:
 Position: {internship_title}
 Company: {company_name}
+Role Description: {internship_description}
+Candidate Background: {resume_text}
 
-Role Description:
-{internship_description}
+## MANDATORY RULES:
 
-Candidate Background:
-{resume_text}
+1. **Length**: Max 120 words, max 6 lines, max 5 paragraphs
 
-Guidelines:
-- Write in a professional yet friendly tone
-- Keep it 100-150 words
-- Start with a greeting
-- Express interest in the role
-- Highlight 2-3 relevant skills that match the position
-- End with a call to action
-- Do NOT include subject line or signature
-- Use "I" perspective (first person)
+2. **Opening Line** (NO greetings):
+   - First line MUST reference something specific about the company/product/team
+   - Template: "Noticed [specific observation] while looking at [company]."
+   - BANNED: "I hope you are doing well", "Greetings", "Dear Sir/Madam"
 
-Write only the email body:"""
+3. **Value-Before-Identity**:
+   - DO NOT introduce yourself (name/year/college) in first 2 lines
+   - Lead with a problem, insight, or outcome
+
+4. **Proof Block** (Exactly ONE):
+   - Include EXACTLY one strong proof from resume
+   - Must be quantifiable OR tangible (project/repo/demo)
+   - Examples: "used by X users", "reduced X by Y%", "open-sourced repo"
+   - BANNED: Skill lists, "I have strong skills in..."
+
+5. **Human Tone**:
+   - Use contractions (I'm, I've, I'd)
+   - Max 1 adjective per paragraph
+   - BANNED: "I am writing to express", "highly motivated", "esteemed organization"
+
+6. **Formatting**:
+   - No paragraph > 2 lines
+   - Short, spaced lines
+   - No walls of text
+
+7. **Call-To-Action** (Exactly ONE):
+   - Must be lightweight and specific
+   - Examples: "Worth a 10-min chat?", "Can I share a quick demo?"
+   - BANNED: "Awaiting your response", "Looking forward to hearing from you"
+
+8. **Directional Interest**:
+   - Show specific interest (not "any role is fine")
+   - No begging language
+
+9. **Personalization Safety**:
+   - NEVER invent metrics, internal tools, or private launches
+   - If context is weak, keep high-level: "I noticed your team is building in [domain]"
+
+10. **Self-Check**:
+    - Would I reply to this?
+    - Does this sound human?
+    - Can this be sent as-is?
+    - If any NO, regenerate
+
+## Output:
+Write ONLY the email body (no subject, no signature). Make it feel like a real human wrote it.
+"""
     
     async def _generate_with_groq(self, prompt: str) -> Optional[str]:
         """Generate email using Groq API"""
@@ -138,16 +176,16 @@ Write only the email body:"""
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a professional email writer specializing in job applications."
+                        "content": "You are an expert cold email writer. You write emails that feel HUMAN, INTENTIONAL, and SPECIFIC—never mass-generated. Follow the Internify Email Generation Specification exactly. Prioritize curiosity, proof, clarity, and human tone. Output emails that you would personally reply to."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                model="llama3-70b-8192",  # or "llama3-8b-8192" for faster responses
-                temperature=0.7,
-                max_tokens=500,
+                model="llama3-70b-8192",
+                temperature=0.8,
+                max_tokens=400,
             )
             
             email_text = chat_completion.choices[0].message.content.strip()
@@ -166,8 +204,8 @@ Write only the email body:"""
             
             # Create generation config
             config = types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=500,
+                temperature=0.8,
+                max_output_tokens=400,
                 system_instruction=self.system_instruction,
                 safety_settings=self.safety_settings
             )
@@ -228,17 +266,21 @@ Best regards"""
             return None
     
     async def generate_subject_line(self, job_title: str, company_name: str) -> str:
-        """Generate a subject line for the email"""
-        # Simple template-based subject line
+        """Generate a subject line following Internify specification"""
+        # Following Internify rules: 4-7 words, curiosity-driven, no "Internship/Application/Request/Opportunity"
+        import random
+        
         templates = [
-            f"Application for {job_title} Position at {company_name}",
-            f"Interested in {job_title} Role at {company_name}",
-            f"{job_title} Application - Enthusiastic Candidate",
-            f"Passionate Candidate for {job_title} at {company_name}"
+            f"Built something for {company_name}",
+            f"Your {job_title.split()[0]} team + an idea",
+            f"Quick question about {company_name}",
+            f"Noticed your work in {job_title.split()[0]}",
+            f"Shipped a project — quick chat?",
+            f"Your product + a thought"
         ]
         
-        # Return first template for consistency, or could randomize
-        return templates[0]
+        # Randomize for variety
+        return random.choice(templates)
 
 
 # Singleton instance
