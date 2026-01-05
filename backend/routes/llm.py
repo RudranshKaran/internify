@@ -35,6 +35,7 @@ async def generate_email(
         # If resume_text is empty, fetch from database
         resume_text = request.resume_text
         if not resume_text or resume_text.strip() == "":
+            print(f"[LLM] No resume_text in request, fetching from database for user: {user_id}")
             resume = await supabase_service.get_latest_resume(user_id)
             
             if not resume:
@@ -44,6 +45,12 @@ async def generate_email(
                 )
             
             resume_text = resume["extracted_text"]
+            print(f"[LLM] Fetched resume from database, length: {len(resume_text)} characters")
+        else:
+            print(f"[LLM] Using resume_text from request, length: {len(resume_text)} characters")
+        
+        # Log first 200 chars of resume to verify content
+        print(f"[LLM] Resume preview: {resume_text[:200]}...")
         
         # Generate email body using LLM
         email_body = await llm_service.generate_email(
