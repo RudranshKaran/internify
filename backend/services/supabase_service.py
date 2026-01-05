@@ -48,24 +48,48 @@ class SupabaseService:
             if user_id:
                 user_data["id"] = user_id
             
+            print(f"[SUPABASE] Creating user with data: {user_data}")
+            
             result = self.client.table("users").insert(user_data).execute()
-            return result.data[0] if result.data else None
+            
+            if result.data:
+                print(f"[SUPABASE] User created successfully: {result.data[0]}")
+                return result.data[0]
+            else:
+                print(f"[SUPABASE] No data returned from user creation")
+                return None
         except Exception as e:
-            print(f"Error creating user: {e}")
+            print(f"[SUPABASE] Error creating user: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"[SUPABASE] Full traceback: {traceback.format_exc()}")
             return None
     
     # Resume Operations
     async def save_resume(self, user_id: str, file_path: str, extracted_text: str) -> Optional[Dict[str, Any]]:
         """Save resume metadata to database"""
         try:
+            print(f"[SUPABASE] Attempting to save resume for user_id: {user_id}")
+            print(f"[SUPABASE] File path: {file_path}")
+            print(f"[SUPABASE] Extracted text length: {len(extracted_text)}")
+            
             result = self.client.table("resumes").insert({
                 "user_id": user_id,
                 "file_path": file_path,
                 "extracted_text": extracted_text
             }).execute()
-            return result.data[0] if result.data else None
+            
+            print(f"[SUPABASE] Resume save result: {result}")
+            
+            if result.data:
+                print(f"[SUPABASE] Resume saved successfully with id: {result.data[0].get('id')}")
+                return result.data[0]
+            else:
+                print(f"[SUPABASE] No data returned from insert")
+                return None
         except Exception as e:
-            print(f"Error saving resume: {e}")
+            print(f"[SUPABASE] Error saving resume: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"[SUPABASE] Full traceback: {traceback.format_exc()}")
             return None
     
     async def get_latest_resume(self, user_id: str) -> Optional[Dict[str, Any]]:

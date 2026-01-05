@@ -64,15 +64,27 @@ async def upload_resume(
         user_id = extract_user_id(payload)
         user_email = payload.get("email", "")
         
+        print(f"[RESUME] Upload request from user_id: {user_id}, email: {user_email}")
+        
         # Ensure user exists in database (create if not exists)
         existing_user = await supabase_service.get_user_by_id(user_id)
         if not existing_user:
-            print(f"User {user_id} not found in database, creating...")
-            await supabase_service.create_user(
+            print(f"[RESUME] User {user_id} not found in database, creating...")
+            created_user = await supabase_service.create_user(
                 email=user_email, 
                 name=user_email.split('@')[0] if user_email else "User",
                 user_id=user_id
             )
+            if created_user:
+                print(f"[RESUME] User created successfully: {created_user}")
+            else:
+                print(f"[RESUME] Failed to create user")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create user account in database"
+                )
+        else:
+            print(f"[RESUME] User exists in database: {existing_user.get('email')}")
         
         # Read file content
         file_content = await file.read()
@@ -103,7 +115,10 @@ async def upload_resume(
                 detail="Failed to upload resume to storage"
             )
         
+        print(f"[RESUME] File uploaded to storage successfully: {uploaded_path}")
+        
         # Save resume metadata to database
+        print(f"[RESUME] Saving resume metadata to database for user: {user_id}")
         resume = await supabase_service.save_resume(
             user_id=user_id,
             file_path=file_path,
@@ -111,9 +126,10 @@ async def upload_resume(
         )
         
         if not resume:
+            # Try to get more specific error from logs
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to save resume metadata"
+                detail="Failed to save resume metadata to database. Please check if your user account exists in the database and try again. Check server logs for details."
             )
         
         return ResumeUploadResponse(
