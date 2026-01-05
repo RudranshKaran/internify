@@ -115,7 +115,9 @@ Generate a cold email for an internship that feels HUMAN and INTENTIONAL.
 Position: {internship_title}
 Company: {company_name}
 Role Description: {internship_description}
-Candidate Background: {resume_text}
+
+## Candidate Resume (MUST USE ACTUAL CONTENT):
+{resume_text}
 
 ## MANDATORY RULES:
 
@@ -130,11 +132,15 @@ Candidate Background: {resume_text}
    - DO NOT introduce yourself (name/year/college) in first 2 lines
    - Lead with a problem, insight, or outcome
 
-4. **Proof Block** (Exactly ONE):
-   - Include EXACTLY one strong proof from resume
-   - Must be quantifiable OR tangible (project/repo/demo)
-   - Examples: "used by X users", "reduced X by Y%", "open-sourced repo"
-   - BANNED: Skill lists, "I have strong skills in..."
+4. **Proof Block** (CRITICAL - MUST USE RESUME):
+   - Extract EXACTLY ONE strong proof from the candidate's ACTUAL RESUME above
+   - Look for: project names, technologies used, metrics, outcomes, specific work
+   - Use SPECIFIC details: "built [actual project name]", "worked with [actual tech stack]", "[actual metric/outcome]"
+   - If resume mentions projects, USE the actual project names
+   - If resume mentions metrics/users/impact, USE those exact numbers
+   - If resume mentions specific technologies, USE those exact tech names
+   - BANNED: Generic "I have experience with Python" or "skilled in AI"
+   - REQUIRED: Use something SPECIFIC and REAL from the resume
 
 5. **Human Tone**:
    - Use contractions (I'm, I've, I'd)
@@ -152,21 +158,27 @@ Candidate Background: {resume_text}
    - BANNED: "Awaiting your response", "Looking forward to hearing from you"
 
 8. **Directional Interest**:
-   - Show specific interest (not "any role is fine")
+   - Show specific interest based on the role description
+   - Connect candidate's actual resume experience to the role requirements
    - No begging language
 
 9. **Personalization Safety**:
-   - NEVER invent metrics, internal tools, or private launches
-   - If context is weak, keep high-level: "I noticed your team is building in [domain]"
+   - ONLY use facts from the resume - NEVER invent anything
+   - If resume has specific project names/metrics, you MUST use them
+   - If context is weak, keep high-level but still specific
 
 10. **Self-Check**:
+    - Did I use ACTUAL content from the resume?
     - Would I reply to this?
     - Does this sound human?
     - Can this be sent as-is?
     - If any NO, regenerate
 
+## CRITICAL: 
+The email MUST reference ACTUAL content from the candidate's resume. Do NOT use generic phrases like "experience with Python and AI". Extract and use SPECIFIC project names, technologies, metrics, or achievements mentioned in the resume.
+
 ## Output:
-Write ONLY the email body (no subject, no signature). Make it feel like a real human wrote it.
+Write ONLY the email body (no subject, no signature). Make it feel like a real human wrote it using their actual experience.
 """
     
     async def _generate_with_groq(self, prompt: str) -> Optional[str]:
@@ -231,39 +243,122 @@ Write ONLY the email body (no subject, no signature). Make it feel like a real h
             return await self._generate_with_gemini_fallback(prompt)
     
     async def _generate_with_gemini_fallback(self, original_prompt: str) -> Optional[str]:
-        """Fallback method with a template-based approach to avoid safety filters"""
+        """Fallback method following Internify specification when API fails"""
         try:
-            # If Gemini keeps blocking, generate a basic template-based email
-            print(f"Using template-based fallback for email generation")
+            print(f"Using Internify-compliant fallback for email generation")
             
-            # Parse basic info from original prompt (this is a workaround)
-            # Extract company and position if available in the prompt
+            # Parse info from original prompt
             lines = original_prompt.split('\n')
-            company = "your company"
-            position = "this internship"
+            company = "the company"
+            position = "this role"
+            resume_text = ""
+            description = ""
             
-            for line in lines:
+            # Extract all sections
+            in_resume_section = False
+            resume_lines = []
+            
+            for i, line in enumerate(lines):
                 if "Company:" in line:
                     company = line.split("Company:")[-1].strip()
                 if "Position:" in line:
                     position = line.split("Position:")[-1].strip()
+                if "Candidate Resume" in line or "Candidate Background:" in line:
+                    in_resume_section = True
+                    continue
+                if in_resume_section and line.strip() and not line.startswith("##"):
+                    resume_lines.append(line.strip())
+                if "Role Description:" in line:
+                    in_resume_section = False
+                    if i + 1 < len(lines):
+                        description = lines[i+1].strip()
             
-            # Generate a professional template email
-            template_email = f"""Dear Hiring Team,
+            resume_text = " ".join(resume_lines)
+            
+            # Extract domain/focus from position
+            domain = "technology"
+            if "AI" in position or "Machine Learning" in position or "ML" in position:
+                domain = "AI"
+            elif "Software" in position or "Engineer" in position or "Developer" in position:
+                domain = "software engineering"
+            elif "Data" in position:
+                domain = "data"
+            elif "Embedded" in position:
+                domain = "embedded systems"
+            elif "Backend" in position or "Backend" in description:
+                domain = "backend development"
+            elif "Frontend" in position or "Frontend" in description:
+                domain = "frontend development"
+            
+            # Extract ACTUAL proof from resume - look for specific projects, technologies, metrics
+            proof = None
+            tech_stack = []
+            projects = []
+            
+            # Look for project names and specific technologies in resume
+            resume_lower = resume_text.lower()
+            
+            # Extract technologies mentioned
+            common_techs = ["python", "javascript", "react", "node", "django", "flask", "tensorflow", 
+                          "pytorch", "c++", "java", "sql", "mongodb", "aws", "docker", "kubernetes",
+                          "git", "linux", "machine learning", "deep learning", "nlp", "computer vision",
+                          "html", "css", "typescript", "vue", "angular", "express", "fastapi", "redis"]
+            
+            for tech in common_techs:
+                if tech in resume_lower:
+                    tech_stack.append(tech.title())
+            
+            # Try to find project mentions (look for common project indicators)
+            project_indicators = ["project", "built", "developed", "created", "implemented", "designed"]
+            for indicator in project_indicators:
+                if indicator in resume_lower:
+                    # Try to extract context around it
+                    words = resume_text.split()
+                    for i, word in enumerate(words):
+                        if indicator in word.lower() and i > 0:
+                            # Get a few words around it
+                            context = " ".join(words[max(0,i-2):min(len(words),i+5)])
+                            if len(context) > 20 and context not in projects:
+                                projects.append(context)
+                                break
+            
+            # Build proof statement from actual resume content
+            if tech_stack:
+                top_techs = tech_stack[:3]
+                if len(top_techs) > 1:
+                    proof = f"worked with {', '.join(top_techs[:2])} and {top_techs[-1]} to build real solutions"
+                else:
+                    proof = f"built projects using {top_techs[0]}"
+            elif projects:
+                # Use first project mention
+                proof = f"recently {projects[0].lower()}"
+            else:
+                # Generic fallback if resume has no clear content
+                proof = "built several projects that solve real problems"
+            
+            # Generate Internify-compliant email with actual resume content
+            template_email = f"""Noticed {company} is building in {domain}.
 
-I am writing to express my strong interest in the {position} position at {company}. As a Computer Science student with hands-on experience in AI development, I am excited about the opportunity to contribute to your team.
+I've {proof}. I'm specifically interested in how your team approaches {domain.replace('the ', '')}.
 
-My background includes working with Python, LLMs, and various AI frameworks, which aligns well with the requirements of this role. I am passionate about building innovative AI solutions and eager to apply my skills in a real-world setting.
+{self._get_connection_to_role(tech_stack, domain, position)}
 
-I would welcome the opportunity to discuss how my experience and enthusiasm can contribute to your team. Thank you for considering my application.
-
-Best regards"""
+Worth a quick chat about the {position.lower()} role?"""
             
             return template_email
             
         except Exception as e:
             print(f"Template fallback error: {e}")
             return None
+    
+    def _get_connection_to_role(self, tech_stack: list, domain: str, position: str) -> str:
+        """Generate a connecting sentence based on actual tech stack"""
+        if tech_stack:
+            # Use actual technologies from resume
+            tech_mention = tech_stack[0] if len(tech_stack) == 1 else f"{tech_stack[0]} and {tech_stack[1]}"
+            return f"My recent work with {tech_mention} taught me that good code solves problems—even when it breaks at first."
+        else:
+            return "I like building things that people actually use—even when they break at first."
     
     async def generate_subject_line(self, job_title: str, company_name: str) -> str:
         """Generate a subject line following Internify specification"""
