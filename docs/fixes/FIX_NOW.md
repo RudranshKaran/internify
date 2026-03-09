@@ -17,7 +17,7 @@
 
 3. **Go to Supabase:**
    - Open https://supabase.com/dashboard
-   - Select your Internify project
+   - Select your InternFlow project
    - Click **SQL Editor** in left sidebar
    - Click **New Query**
 

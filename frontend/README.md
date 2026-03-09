@@ -1,6 +1,6 @@
-# Internify Frontend
+# InternFlow Frontend
 
-This is the frontend application for Internify, built with Next.js 14, TypeScript, and Tailwind CSS.
+This is the frontend application for InternFlow, built with Next.js 14, TypeScript, and Tailwind CSS.
 
 ## Tech Stack
 

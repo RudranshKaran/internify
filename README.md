@@ -1,6 +1,6 @@
-# Internify - AI-Powered Internship Application Platform
+# InternFlow - AI-Powered Internship Application Platform
 
-Internify is a modern, full-stack web platform that automates the entire internship application process. It helps users send personalized cold emails to companies by leveraging AI, real-time internship scraping, and automated email outreach.
+InternFlow is a modern, full-stack web platform that automates the entire internship application process. It helps users send personalized cold emails to companies by leveraging AI, real-time internship scraping, and automated email outreach.
 
 ![Tech Stack](https://img.shields.io/badge/Next.js-14-black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python-green)
@@ -49,7 +49,7 @@ Internify is a modern, full-stack web platform that automates the entire interns
 ## Project Structure
 
 ```
-internify/
+internflow/
 │
 ├── backend/                  # FastAPI Backend
 │   ├── main.py              # FastAPI entry point

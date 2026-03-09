@@ -7,7 +7,7 @@ import { Toast } from '@/components/Toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Internify - AI-Powered Internship Applications',
+  title: 'InternFlow - AI-Powered Internship Applications',
   description: 'Automate your internship applications with AI-generated personalized emails',
 }
 

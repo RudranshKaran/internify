@@ -1,7 +1,7 @@
 # Indian Companies & Contact Information Update
 
 ## Overview
-Updated Internify to target Indian companies and include contact information in internship listings.
+Updated InternFlow to target Indian companies and include contact information in internship listings.
 
 ## Changes Made
 

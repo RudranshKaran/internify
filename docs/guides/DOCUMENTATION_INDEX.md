@@ -100,7 +100,7 @@
 ## 📁 File Organization
 
 ```
-internify/
+internflow/
 │
 ├── 🚀 MIGRATION & DEPLOYMENT (Use Now)
 │   ├── START_HERE.md ⭐ START HERE

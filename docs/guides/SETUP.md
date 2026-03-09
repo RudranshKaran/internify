@@ -1,4 +1,4 @@
-# 🚀 Quick Setup Guide - Internify
+# 🚀 Quick Setup Guide - InternFlow
 
 ## Prerequisites Checklist
 

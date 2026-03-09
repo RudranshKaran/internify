@@ -1,4 +1,4 @@
-# Internify - Quick Testing Checklist
+# InternFlow - Quick Testing Checklist
 
 Use this checklist to verify all features are working correctly after the improvements.
 

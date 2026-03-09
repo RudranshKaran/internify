@@ -64,6 +64,11 @@ export default function EmailPreviewPage() {
   const generateEmail = async (internshipData: any, resumeText: string) => {
     setGenerating(true)
     try {
+      console.log('[EMAIL-PREVIEW] Generating email for:', internshipData.title)
+      console.log('[EMAIL-PREVIEW] Company:', internshipData.company)
+      console.log('[EMAIL-PREVIEW] Sending description (length):', internshipData.description?.length || 0, 'chars')
+      console.log('[EMAIL-PREVIEW] Description being sent:', internshipData.description?.substring(0, 300) || 'NO DESCRIPTION!')
+      
       const response = await llmAPI.generateEmail({
         internship_description: internshipData.description || internshipData.title,
         resume_text: resumeText,
@@ -71,9 +76,14 @@ export default function EmailPreviewPage() {
         company_name: internshipData.company,
       })
 
+      console.log('[EMAIL-PREVIEW] Email generated successfully')
+      console.log('[EMAIL-PREVIEW] Subject:', response.data.subject)
+      console.log('[EMAIL-PREVIEW] Body length:', response.data.body?.length || 0, 'chars')
+      
       setSubject(response.data.subject)
       setBody(response.data.body)
     } catch (error: any) {
+      console.error('[EMAIL-PREVIEW] Generation failed:', error)
       toast.error(error.response?.data?.detail || 'Failed to generate email')
       router.push('/dashboard')
     } finally {

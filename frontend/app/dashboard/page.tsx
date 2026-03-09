@@ -156,6 +156,11 @@ export default function DashboardPage() {
   }
 
   const handleInternshipSelect = (internship: any) => {
+    console.log('[DASHBOARD] Selected internship:', internship.title)
+    console.log('[DASHBOARD] Company:', internship.company)
+    console.log('[DASHBOARD] Description length:', internship.description?.length || 0, 'chars')
+    console.log('[DASHBOARD] Description preview:', internship.description?.substring(0, 200) || 'NO DESCRIPTION')
+    
     setSelectedInternship(internship)
     // Store selected internship in localStorage and navigate
     localStorage.setItem('selectedInternship', JSON.stringify(internship))

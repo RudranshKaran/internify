@@ -2,7 +2,7 @@
 
 # Requires: Python 3.11+, Node.js 18+
 
-Write-Host "🚀 Installing Internify..." -ForegroundColor Cyan
+Write-Host "🚀 Installing InternFlow..." -ForegroundColor Cyan
 
 # Backend setup
 Write-Host "`n📦 Setting up backend..." -ForegroundColor Yellow

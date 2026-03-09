@@ -1,4 +1,4 @@
-# Internify Architecture Diagram
+# InternFlow Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

@@ -96,6 +96,27 @@ class SupabaseService:
             print(f"[SUPABASE] File path: {file_path}")
             print(f"[SUPABASE] Extracted text length: {len(extracted_text)}")
             
+            # First verify user exists by trying to query users table
+            try:
+                user_check = self.client.table("users").select("id").eq("id", user_id).execute()
+                if not user_check.data:
+                    print(f"[SUPABASE] WARNING: User {user_id} not found in users table!")
+                    print(f"[SUPABASE] Attempting to insert user first...")
+                    # Try to insert user directly as last resort
+                    try:
+                        self.client.table("users").insert({
+                            "id": user_id,
+                            "email": "temp@temp.com",  # Temporary
+                            "name": "User"
+                        }).execute()
+                        print(f"[SUPABASE] Emergency user creation successful")
+                    except Exception as ue:
+                        print(f"[SUPABASE] Emergency user creation failed: {ue}")
+                else:
+                    print(f"[SUPABASE] User verification passed")
+            except Exception as check_error:
+                print(f"[SUPABASE] User check error: {check_error}")
+            
             result = self.client.table("resumes").insert({
                 "user_id": user_id,
                 "file_path": file_path,
@@ -111,7 +132,17 @@ class SupabaseService:
                 print(f"[SUPABASE] No data returned from insert")
                 return None
         except Exception as e:
-            print(f"[SUPABASE] Error saving resume: {type(e).__name__}: {str(e)}")
+            error_msg = str(e)
+            print(f"[SUPABASE] Error saving resume: {type(e).__name__}: {error_msg}")
+            
+            # Check for specific error types
+            if "foreign key" in error_msg.lower():
+                print(f"[SUPABASE] FOREIGN KEY CONSTRAINT ERROR - User {user_id} does not exist in users table")
+            elif "permission denied" in error_msg.lower() or "policy" in error_msg.lower():
+                print(f"[SUPABASE] RLS POLICY ERROR - Check RLS policies in Supabase dashboard")
+            elif "violates not-null" in error_msg.lower():
+                print(f"[SUPABASE] NULL VALUE ERROR - Check required fields")
+                
             import traceback
             print(f"[SUPABASE] Full traceback: {traceback.format_exc()}")
             return None

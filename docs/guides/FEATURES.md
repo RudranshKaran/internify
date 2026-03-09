@@ -1,4 +1,4 @@
-## Internify - Feature Checklist
+## InternFlow - Feature Checklist
 
 ### ✅ Completed Features
 

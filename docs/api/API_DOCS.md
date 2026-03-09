@@ -1,4 +1,4 @@
-# 📄 API Documentation - Internify
+# 📄 API Documentation - InternFlow
 
 Base URL: `http://localhost:8000` (development)
 

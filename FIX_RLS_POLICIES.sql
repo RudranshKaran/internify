@@ -1,4 +1,4 @@
--- Fix RLS Policies for Internify
+-- Fix RLS Policies for InternFlow
 -- Run this in your Supabase SQL Editor to allow user creation and resume uploads
 
 -- First, let's check and fix the users table policies

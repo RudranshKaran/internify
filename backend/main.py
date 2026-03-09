@@ -18,8 +18,8 @@ load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Internify API",
-    description="Backend API for Internify - AI-Powered Internship Application Platform",
+    title="InternFlow API",
+    description="Backend API for InternFlow - AI-Powered Internship Application Platform",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -31,8 +31,8 @@ origins = [
     "http://localhost:3000",
     "http://localhost:3001", 
     "https://*.vercel.app",
-    "https://internify.vercel.app",
-    "https://internify-*.vercel.app",
+    "https://internflow.vercel.app",
+    "https://internflow-*.vercel.app",
 ]
 
 # Get additional origins from environment variable
@@ -61,7 +61,7 @@ app.include_router(email_router)
 async def root():
     """Root endpoint - API health check"""
     return {
-        "message": "Welcome to Internify API",
+        "message": "Welcome to InternFlow API",
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs",
@@ -75,7 +75,7 @@ async def health_check():
     """Health check endpoint for monitoring"""
     return {
         "status": "healthy",
-        "service": "Internify API"
+        "service": "InternFlow API"
     }
 
 
@@ -97,7 +97,7 @@ async def global_exception_handler(request, exc):
 @app.on_event("startup")
 async def startup_event():
     """Run on application startup"""
-    print("🚀 Internify API is starting up...")
+    print("🚀 InternFlow API is starting up...")
     print(f"📝 Documentation available at: /docs")
     print(f"🔧 Environment: {os.getenv('ENVIRONMENT', 'development')}")
 
@@ -106,7 +106,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Run on application shutdown"""
-    print("👋 Internify API is shutting down...")
+    print("👋 InternFlow API is shutting down...")
 
 
 if __name__ == "__main__":

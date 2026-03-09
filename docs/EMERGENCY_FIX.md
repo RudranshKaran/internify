@@ -40,7 +40,7 @@ The code has been updated. Just restart the backend.
 
 1. **Open Supabase Dashboard:**
    - Go to https://supabase.com/dashboard
-   - Select your Internify project
+   - Select your InternFlow project
 
 2. **Open SQL Editor:**
    - Click "SQL Editor" in left sidebar
@@ -138,7 +138,7 @@ In PowerShell terminal running uvicorn:
 ```powershell
 # Press Ctrl+C to stop
 # Then restart:
-cd c:\Users\rudra\Desktop\projects\internify\backend
+cd c:\Users\rudra\Desktop\projects\internflow\backend
 uvicorn main:app --reload
 ```
 

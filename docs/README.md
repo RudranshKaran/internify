@@ -1,6 +1,6 @@
-# 📚 Internify Documentation
+# 📚 InternFlow Documentation
 
-Welcome to the Internify documentation! This folder contains all project documentation organized by category.
+Welcome to the InternFlow documentation! This folder contains all project documentation organized by category.
 
 ---
 

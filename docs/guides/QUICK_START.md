@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide - Internify
+# 🚀 Quick Start Guide - InternFlow
 
 ## Current Status: ✅ ALL ISSUES FIXED!
 
@@ -20,7 +20,7 @@ Your frontend is now fully configured and ready. The only thing left is adding y
 
 ## Your `.env.local` File Location
 
-**File:** `c:\Users\rudra\Desktop\projects\internify\frontend\.env.local`
+**File:** `c:\Users\rudra\Desktop\projects\internflow\frontend\.env.local`
 
 **Current content:**
 ```bash
@@ -37,7 +37,7 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 🔗 https://supabase.com/dashboard
 
 ### Step 2: Create/Select Your Project
-Click on your "Internify" project (or create one if you haven't)
+Click on your "InternFlow" project (or create one if you haven't)
 
 ### Step 3: Get Your Credentials
 1. Click **Settings** (gear icon in sidebar)
@@ -108,7 +108,7 @@ This should now succeed! ✅
 ## Supabase Setup Checklist
 
 - [ ] Create Supabase account at https://supabase.com
-- [ ] Create new project called "Internify"
+- [ ] Create new project called "InternFlow"
 - [ ] Copy Project URL to both `.env` files
 - [ ] Copy anon key to `frontend/.env.local`
 - [ ] Copy service_role key to `backend/.env`

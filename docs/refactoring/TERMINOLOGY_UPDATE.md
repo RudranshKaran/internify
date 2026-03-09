@@ -1,4 +1,4 @@
-# Internify Terminology Update Summary
+# InternFlow Terminology Update Summary
 
 ## Changes Required: JOB → INTERNSHIP
 

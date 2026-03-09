@@ -21,7 +21,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
           <p className="text-gray-700 mb-4">
-            By accessing and using Internify (&ldquo;the Service&rdquo;), you accept and agree to be bound by the terms 
+            By accessing and using InternFlow (&ldquo;the Service&rdquo;), you accept and agree to be bound by the terms 
             and provision of this agreement. If you do not agree to abide by the above, please do not use 
             this service.
           </p>
@@ -30,7 +30,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Description of Service</h2>
           <p className="text-gray-700 mb-4">
-            Internify provides an automated internship application platform that:
+            InternFlow provides an automated internship application platform that:
           </p>
           <ul className="list-disc pl-6 text-gray-700 space-y-2">
             <li>Allows users to upload and store their resumes</li>
@@ -70,7 +70,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. AI-Generated Content</h2>
           <p className="text-gray-700 mb-4">
-            Internify uses artificial intelligence to generate application emails. You acknowledge that:
+            InternFlow uses artificial intelligence to generate application emails. You acknowledge that:
           </p>
           <ul className="list-disc pl-6 text-gray-700 space-y-2">
             <li>AI-generated content may contain errors or inaccuracies</li>
@@ -96,7 +96,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Limitation of Liability</h2>
           <p className="text-gray-700 mb-4">
-            Internify is provided &ldquo;as is&rdquo; without warranties of any kind. We are not liable for:
+            InternFlow is provided &ldquo;as is&rdquo; without warranties of any kind. We are not liable for:
           </p>
           <ul className="list-disc pl-6 text-gray-700 space-y-2">
             <li>Job application outcomes or hiring decisions</li>
@@ -135,7 +135,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Indemnification</h2>
           <p className="text-gray-700 mb-4">
-            You agree to indemnify and hold Internify harmless from any claims, damages, or expenses 
+            You agree to indemnify and hold InternFlow harmless from any claims, damages, or expenses 
             arising from your use of the service or violation of these terms.
           </p>
         </section>
@@ -154,14 +154,14 @@ export default function TermsPage() {
             For questions about these terms, please contact us at:
           </p>
           <p className="text-gray-700">
-            Email: <a href="mailto:legal@internify.com" className="text-primary hover:underline">legal@internify.com</a>
+            Email: <a href="mailto:legal@internflow.com" className="text-primary hover:underline">legal@internflow.com</a>
           </p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Acceptance</h2>
           <p className="text-gray-700 mb-4">
-            By using Internify, you acknowledge that you have read, understood, and agree to be bound by 
+            By using InternFlow, you acknowledge that you have read, understood, and agree to be bound by 
             these Terms of Service and our Privacy Policy.
           </p>
         </section>

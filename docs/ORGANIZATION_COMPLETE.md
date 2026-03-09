@@ -14,7 +14,7 @@ All markdown documentation files (except README.md) have been organized into a s
 ## 📂 New Folder Structure
 
 ```
-internify/
+internflow/
 │
 ├── README.md                          ← Only .md file in root
 │
@@ -239,7 +239,7 @@ internify/
 
 ### Before:
 ```
-internify/
+internflow/
 ├── README.md
 ├── API_DOCS.md
 ├── ARCHITECTURE.md
@@ -252,7 +252,7 @@ internify/
 
 ### After:
 ```
-internify/
+internflow/
 ├── README.md (only .md in root)
 └── docs/
     ├── README.md (navigation hub)

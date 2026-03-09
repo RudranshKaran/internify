@@ -1,4 +1,4 @@
--- Internify Database Schema
+-- InternFlow Database Schema
 -- Run this in Supabase SQL Editor
 
 -- Enable UUID extension if not already enabled

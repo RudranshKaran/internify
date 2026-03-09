@@ -1,6 +1,6 @@
-# Internify Backend - FastAPI
+# InternFlow Backend - FastAPI
 
-This is the backend API for the Internify platform, built with FastAPI.
+This is the backend API for the InternFlow platform, built with FastAPI.
 
 ## Setup
 

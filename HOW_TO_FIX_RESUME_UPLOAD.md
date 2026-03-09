@@ -23,7 +23,7 @@ This will:
 ```bash
 # Stop the backend (Ctrl+C in the terminal)
 # Then restart:
-cd c:\Users\rudra\Desktop\projects\internify\backend
+cd c:\Users\rudra\Desktop\projects\internflow\backend
 python main.py
 ```
 

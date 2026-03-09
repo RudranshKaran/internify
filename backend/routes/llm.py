@@ -51,6 +51,12 @@ async def generate_email(
         
         # Log first 200 chars of resume to verify content
         print(f"[LLM] Resume preview: {resume_text[:200]}...")
+        print(f"[LLM] ===== EMAIL GENERATION FLOW =====")
+        print(f"[LLM] STEP 1: Resume parsed (length: {len(resume_text)} chars)")
+        print(f"[LLM] STEP 2: Job details - {request.internship_title} at {request.company_name}")
+        print(f"[LLM] STEP 2: Job description received: {request.internship_description[:300] if request.internship_description else 'EMPTY!'}...")
+        print(f"[LLM] STEP 2: Full job description length: {len(request.internship_description) if request.internship_description else 0} chars")
+        print(f"[LLM] STEP 3: Matching resume experience with job requirements...")
         
         # Generate email body using LLM
         email_body = await llm_service.generate_email(
@@ -59,6 +65,8 @@ async def generate_email(
             internship_title=request.internship_title,
             company_name=request.company_name
         )
+        
+        print(f"[LLM] STEP 3: Email generated successfully (length: {len(email_body) if email_body else 0} chars)")
         
         if not email_body:
             raise HTTPException(

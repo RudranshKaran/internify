@@ -1,7 +1,7 @@
-# Internify - Feature Improvements Summary
+# InternFlow - Feature Improvements Summary
 
 ## Overview
-This document summarizes the improvements made to Internify based on comprehensive testing feedback from Comet AI. The goal was to enhance user experience, add missing features, and improve overall functionality.
+This document summarizes the improvements made to InternFlow based on comprehensive testing feedback from Comet AI. The goal was to enhance user experience, add missing features, and improve overall functionality.
 
 ---
 

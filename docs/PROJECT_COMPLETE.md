@@ -1,4 +1,4 @@
-# 🎉 Project Complete! - Internify
+# 🎉 Project Complete! - InternFlow
 
 ## ✅ What Has Been Created
 

@@ -1,6 +1,6 @@
 # ✅ TERMINOLOGY REFACTORING - COMPLETE
 
-**Project**: Internify  
+**Project**: InternFlow  
 **Date**: October 16, 2025  
 **Status**: ✅ **READY FOR DATABASE MIGRATION & DEPLOYMENT**
 
@@ -198,7 +198,7 @@ The database migration is the **only irreversible step**. Once the table is rena
 
 ### File Locations
 ```
-📁 internify/
+📁 internflow/
 ├── 📄 migration_jobs_to_internships.sql      ← RUN THIS
 ├── 📄 DATABASE_MIGRATION_GUIDE.md            ← READ THIS FIRST
 ├── 📄 REFACTORING_COMPLETE.md                ← FULL DEPLOYMENT GUIDE

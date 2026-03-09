@@ -212,7 +212,7 @@ export default function Home() {
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold">I</span>
                 </div>
-                <span className="text-xl font-bold">Internify</span>
+                <span className="text-xl font-bold">InternFlow</span>
               </div>
               <p className="text-gray-400">
                 AI-powered internship applications made simple

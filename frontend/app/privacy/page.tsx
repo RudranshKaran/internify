@@ -21,7 +21,7 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
           <p className="text-gray-700 mb-4">
-            Welcome to Internify. We respect your privacy and are committed to protecting your personal data. 
+            Welcome to InternFlow. We respect your privacy and are committed to protecting your personal data. 
             This privacy policy will inform you about how we look after your personal data when you visit our 
             platform and tell you about your privacy rights and how the law protects you.
           </p>
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
             If you have any questions about this privacy policy or our practices, please contact us at:
           </p>
           <p className="text-gray-700">
-            Email: <a href="mailto:privacy@internify.com" className="text-primary hover:underline">privacy@internify.com</a>
+            Email: <a href="mailto:privacy@internflow.com" className="text-primary hover:underline">privacy@internflow.com</a>
           </p>
         </section>
       </div>

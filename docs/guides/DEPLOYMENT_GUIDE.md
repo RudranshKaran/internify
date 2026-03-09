@@ -1,6 +1,6 @@
-# 🚀 Internify Deployment Guide
+# 🚀 InternFlow Deployment Guide
 
-Complete step-by-step guide to deploy your Internify application to production.
+Complete step-by-step guide to deploy your InternFlow application to production.
 
 ---
 
@@ -54,7 +54,7 @@ git commit -m "Initial commit - Ready for deployment"
 ### Step 2: Create GitHub Repository
 
 1. Go to [GitHub](https://github.com/new)
-2. Create a new repository named `internify`
+2. Create a new repository named `internflow`
 3. **Do NOT** initialize with README (you already have one)
 4. Copy the repository URL
 
@@ -62,7 +62,7 @@ git commit -m "Initial commit - Ready for deployment"
 
 ```bash
 # Add remote origin
-git remote add origin https://github.com/YOUR_USERNAME/internify.git
+git remote add origin https://github.com/YOUR_USERNAME/internflow.git
 
 # Push code
 git branch -M main
@@ -83,7 +83,7 @@ git push -u origin main
 
 1. Click **"New Project"**
 2. Select **"Deploy from GitHub repo"**
-3. Choose your `internify` repository
+3. Choose your `internflow` repository
 4. Click **"Deploy Now"**
 
 **Railway will automatically:**
@@ -146,7 +146,7 @@ GEMINI_API_KEY=your_gemini_api_key
 ### Step 2: Import Project
 
 1. Click **"Add New..."** → **"Project"**
-2. Import your `internify` repository
+2. Import your `internflow` repository
 3. Configure the project:
 
 **Framework Preset:**
@@ -175,7 +175,7 @@ NEXT_PUBLIC_BACKEND_URL=https://your-app.up.railway.app
 
 1. Click **"Deploy"**
 2. Wait for deployment (2-5 minutes)
-3. Once deployed, you'll get a URL like: `https://internify-xyz123.vercel.app`
+3. Once deployed, you'll get a URL like: `https://internflow-xyz123.vercel.app`
 
 ---
 
@@ -248,14 +248,14 @@ In Supabase Dashboard:
 
 1. Go to Vercel project dashboard
 2. Click **Settings** → **Domains**
-3. Add your domain (e.g., `internify.com`)
+3. Add your domain (e.g., `internflow.com`)
 4. Follow DNS configuration instructions
 5. Wait for DNS propagation (up to 48 hours)
 
 ### Update URLs After Custom Domain
 
 Update in Supabase:
-- Add `https://internify.com/dashboard` to redirect URLs
+- Add `https://internflow.com/dashboard` to redirect URLs
 
 Update frontend env variables in Vercel:
 - Keep `NEXT_PUBLIC_BACKEND_URL` pointing to Railway URL
@@ -421,4 +421,4 @@ Your application is now live at:
 
 ---
 
-**Congratulations on deploying Internify! 🚀🎊**
+**Congratulations on deploying InternFlow! 🚀🎊**

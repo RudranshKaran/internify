@@ -23,7 +23,7 @@ class ResendService:
         to_email: str,
         subject: str,
         body: str,
-        from_name: str = "Internify",
+        from_name: str = "InternFlow",
         reply_to: Optional[str] = None
     ) -> Optional[dict]:
         """
@@ -111,7 +111,7 @@ class ResendService:
     </div>
     
     <div class="footer">
-        <p>This email was sent via <a href="https://internify.app" target="_blank">Internify</a></p>
+        <p>This email was sent via <a href="https://internflow.app" target="_blank">InternFlow</a></p>
         <p style="font-size: 11px; color: #999;">
             If you'd like to stop receiving emails from this sender, please reply directly to them.
         </p>
