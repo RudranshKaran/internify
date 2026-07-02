@@ -8,7 +8,7 @@
 - [x] JWT authentication with Supabase
 - [x] Resume upload and PDF text extraction
 - [x] Internship scraping with SerpAPI
-- [x] AI email generation with Groq/Gemini
+- [x] AI email generation with Gemini
 - [x] Email sending with Resend API
 - [x] Email history tracking
 - [x] CORS configuration
@@ -55,7 +55,7 @@
 
 ### 🚀 Deployment Ready
 - [x] Vercel config for frontend
-- [x] Render/Railway config for backend
+- [x] Render config for backend
 - [x] Environment variable documentation
 - [x] Production-ready error handling
 - [x] CORS configured

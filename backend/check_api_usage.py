@@ -14,13 +14,11 @@ print("=" * 80)
 print("GEMINI API USAGE ANALYSIS")
 print("=" * 80)
 
-# Check if keys are configured
+# Check if key is configured
 gemini_key = os.getenv("GEMINI_API_KEY")
-groq_key = os.getenv("GROQ_API_KEY")
 
 print("\n📊 Current Configuration:")
 print(f"   Gemini API Key: {'✓ Configured' if gemini_key else '✗ Not configured'}")
-print(f"   Groq API Key: {'✓ Configured' if groq_key else '✗ Not configured'}")
 
 if gemini_key:
     print(f"   Gemini Key (partial): {gemini_key[:10]}...{gemini_key[-6:]}")
@@ -113,28 +111,22 @@ print("=" * 80)
 print("""
 🚀 Quick Wins:
 
-1. SWITCH TO GROQ (RECOMMENDED):
-   • Get API key: https://console.groq.com
-   • Add to .env: GROQ_API_KEY=your_key_here
-   • Groq has 30 RPM free tier (3x Gemini)
-   • Groq is faster and fewer safety blocks
-   
-2. REDUCE RETRY ATTEMPTS:
+1. REDUCE RETRY ATTEMPTS:
    • Current: max 2 retries on rate limit
    • Reduce to: max 1 retry (or 0)
-   • Edit llm_service.py line ~750: retry_count < 1
+   • Edit llm_service.py: retry_count < 1
    
-3. DISABLE SAFETY FILTER FALLBACK:
+2. DISABLE SAFETY FILTER FALLBACK:
    • Remove simplified generation fallback
    • Fail fast instead of retrying with different prompt
    • Reduces 2-call pattern to 1-call pattern
    
-4. ADD RATE LIMITING ON FRONTEND:
+3. ADD RATE LIMITING ON FRONTEND:
    • Debounce email generation button (2-3 sec delay)
    • Disable button after click until response
    • Show "Generating..." state to prevent double-clicks
    
-5. CACHE EMAIL GENERATIONS:
+4. CACHE EMAIL GENERATIONS:
    • Cache generated emails by (resume_id + internship_id)
    • Return cached email if same job + resume combo
    • Reduces duplicate generations
@@ -158,49 +150,20 @@ print("""
 """)
 
 print("\n" + "=" * 80)
-print("RECOMMENDATIONS FOR YOUR SITUATION")
+print("NEXT STEPS")
 print("=" * 80)
 
-if groq_key:
-    print("\n✅ You have Groq configured - this should help!")
-    print("   Make sure backend is actually using Groq (check startup logs)")
+if gemini_key:
+    print("\n✅ Gemini API key is configured.")
+    print("   Check Google AI Studio for your current quota usage.")
 else:
-    print("\n⚠️ NO GROQ KEY DETECTED - THIS IS YOUR PROBLEM!")
-    print("   Solution: Get Groq API key (takes 2 minutes):")
-    print("   1. Visit: https://console.groq.com")
+    print("\n⚠️ NO GEMINI API KEY DETECTED!")
+    print("   Solution: Get a Gemini API key:")
+    print("   1. Visit: https://aistudio.google.com/apikey")
     print("   2. Sign up (free)")
     print("   3. Generate API key")
-    print("   4. Add to .env: GROQ_API_KEY=gsk_...")
+    print("   4. Add to .env: GEMINI_API_KEY=your_key_here")
     print("   5. Restart backend")
-
-print("\n" + "=" * 80)
-print("COST-EFFECTIVE ALTERNATIVES")
-print("=" * 80)
-
-print("""
-💡 Free Tier Options:
-
-1. Groq (RECOMMENDED):
-   • 30 RPM, 14,400 RPD
-   • Models: Llama 3.1 70B, Mixtral 8x7B
-   • Faster response times
-   • Fewer safety restrictions
-   
-2. Together AI:
-   • $25 free credits
-   • Multiple models available
-   • Good for testing
-   
-3. Anthropic Claude (via API):
-   • $5 free credits
-   • High quality outputs
-   • Less restrictive safety filters
-   
-4. OpenAI GPT-3.5:
-   • $5 free credits (new accounts)
-   • Fast and reliable
-   • Good alternative to Gemini
-""")
 
 print("\n" + "=" * 80)
 input("Press Enter to exit...")

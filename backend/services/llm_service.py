@@ -9,7 +9,7 @@ load_dotenv()
 
 class LLMService:
     """
-    Service for AI email generation using Groq or Gemini
+    Service for AI email generation using Gemini
     
     ANTI-CONTAMINATION ARCHITECTURE:
     - Every request is stateless with NO memory of previous resumes
@@ -18,57 +18,44 @@ class LLMService:
     """
     
     def __init__(self):
-        self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
+        self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         
-        # Determine which service to use
-        self.use_groq = bool(self.groq_api_key)
-        self.use_gemini = bool(self.gemini_api_key)
+        if not self.gemini_api_key:
+            raise ValueError("No LLM API key found. Please set GEMINI_API_KEY in your .env file")
         
-        if not self.use_groq and not self.use_gemini:
-            raise ValueError("No LLM API key found. Please set GROQ_API_KEY or GEMINI_API_KEY")
-        
-        # Initialize clients
-        if self.use_groq:
-            try:
-                from groq import Groq
-                self.groq_client = Groq(api_key=self.groq_api_key)
-            except ImportError:
-                print("Groq library not installed. Install with: pip install groq")
-                self.use_groq = False
-        
-        if self.use_gemini and not self.use_groq:
-            try:
-                from google import genai
-                from google.genai import types
-                
-                # Initialize the client
-                self.genai_client = genai.Client(api_key=self.gemini_api_key)
-                
-                # Configure safety settings to disable all safety filters for professional content
-                # This prevents false positives on job-related emails
-                self.safety_settings = [
-                    types.SafetySetting(
-                        category='HARM_CATEGORY_HATE_SPEECH',
-                        threshold='OFF'
-                    ),
-                    types.SafetySetting(
-                        category='HARM_CATEGORY_HARASSMENT',
-                        threshold='OFF'
-                    ),
-                    types.SafetySetting(
-                        category='HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                        threshold='OFF'
-                    ),
-                    types.SafetySetting(
-                        category='HARM_CATEGORY_DANGEROUS_CONTENT',
-                        threshold='OFF'
-                    ),
-                ]
-                
-                # ANTI-CONTAMINATION SYSTEM INSTRUCTION
-                # Explicitly states no memory, no examples, no cached context
-                self.system_instruction = """You are a professional email generation system with STRICT RULES:
+        # Initialize Gemini client
+        try:
+            from google import genai
+            from google.genai import types
+            
+            # Initialize the client
+            self.genai_client = genai.Client(api_key=self.gemini_api_key)
+            
+            # Configure safety settings to disable all safety filters for professional content
+            # This prevents false positives on job-related emails
+            self.safety_settings = [
+                types.SafetySetting(
+                    category='HARM_CATEGORY_HATE_SPEECH',
+                    threshold='OFF'
+                ),
+                types.SafetySetting(
+                    category='HARM_CATEGORY_HARASSMENT',
+                    threshold='OFF'
+                ),
+                types.SafetySetting(
+                    category='HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    threshold='OFF'
+                ),
+                types.SafetySetting(
+                    category='HARM_CATEGORY_DANGEROUS_CONTENT',
+                    threshold='OFF'
+                ),
+            ]
+            
+            # ANTI-CONTAMINATION SYSTEM INSTRUCTION
+            # Explicitly states no memory, no examples, no cached context
+            self.system_instruction = """You are a professional email generation system with STRICT RULES:
 
 1. MEMORY ISOLATION: You have NO memory of previous resumes, candidates, or examples. Every request is independent.
 2. RESUME BOUNDARY: You are FORBIDDEN from mentioning ANY project, technology, or achievement that does NOT appear in the current resume text.
@@ -83,113 +70,107 @@ PHASE 3: Generate email using ONLY Phase 2 approved data
 
 Every output ends with: "I've attached my resume below for more details on the project and related work."
 """
-                
-                print("✓ Initialized Gemini with anti-contamination system")
-            except ImportError:
-                print("Google GenAI library not installed. Install with: pip install google-genai")
-                self.use_gemini = False
-            except Exception as e:
-                print(f"Failed to initialize Gemini: {e}")
-                self.use_gemini = False
+            
+            print(f"✓ Initialized Gemini with anti-contamination system (model={self.gemini_model})")
+        except ImportError:
+            raise RuntimeError("Google GenAI library not installed. Install with: pip install google-genai")
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize Gemini: {e}")
     
     async def generate_email(
         self,
         resume_text: str,
         internship_description: str,
         internship_title: str,
-        company_name: str
-    ) -> Optional[str]:
+        company_name: str,
+        extracted_data: Optional[Dict] = None,
+        candidate_name: str = "",
+    ) -> Dict:
         """
-        Generate a personalized cold email using 3-PHASE PIPELINE
-        
-        ANTI-CONTAMINATION FLOW:
-        Phase 1: Job Requirement Extraction (deterministic)
-        Phase 2: Resume Filtering (strict matching only)
-        Phase 3: Email Generation (using only Phase 2 data)
-        
-        Args:
-            resume_text: Extracted text from user's resume (CURRENT REQUEST ONLY)
-            internship_description: Internship posting description
-            internship_title: Title of the internship position
-            company_name: Name of the company
-        
-        Returns:
-            Generated email text or None if generation fails
+        Generate a personalized cold email using 3-PHASE PIPELINE.
+
+        When *extracted_data* (from the run-once Gemini extraction) is
+        provided, the pipeline is:
+
+          Phase 1 — Structured job requirement extraction (Gemini call)
+          Phase 2 — Resume-to-job matching (set overlap)
+          Phase 3 — Email generation via matched-data prompt (Gemini call)
+
+        Returns a dict with ``subject`` and ``body`` keys.
         """
-        
         print(f"\n{'='*60}")
         print(f"[PIPELINE] Starting 3-Phase Email Generation")
         print(f"[PIPELINE] Job: {internship_title} at {company_name}")
-        print(f"[PIPELINE] Resume length: {len(resume_text)} chars")
+        print(f"[PIPELINE] Has extracted_data: {extracted_data is not None}")
         print(f"{'='*60}\n")
-        
-        # PHASE 1: Extract job requirements (deterministic)
-        print("[PHASE 1] Extracting job requirements...")
+
+        if extracted_data:
+            # ── New pipeline: extract job requirements → match → write ──
+            print("[PIPELINE] Phase 1 — Extracting job requirements via Gemini…")
+            job_reqs = await self._extract_job_requirements_structured(
+                internship_description, internship_title
+            ) or self._extract_job_requirements(internship_description, internship_title)
+
+            print("[PIPELINE] Phase 2 — Matching resume to job requirements…")
+            match_statements = self._match_resume_to_job(extracted_data, job_reqs)
+
+            print("[PIPELINE] Phase 3 — Generating email from explicit match data…")
+            prompt = self._create_matched_prompt(
+                match_statements=match_statements,
+                job_reqs=job_reqs,
+                internship_title=internship_title,
+                company_name=company_name,
+                candidate_name=candidate_name,
+            )
+
+            result = await self._generate_with_gemini_json(prompt)
+
+            if result and result.get("subject") and result.get("body"):
+                return result  # {"subject": ..., "body": ...}
+
+            print("[PIPELINE] JSON generation returned incomplete result, falling back to text generation")
+            # Fall through to text-based generation with old prompt path
+
+        # ── Fallback: deterministic 3-phase pipeline ───────────
+        print("[PHASE 1] Extracting job requirements (deterministic)...")
         job_requirements = self._extract_job_requirements(
-            internship_description, 
+            internship_description,
             internship_title
         )
         print(f"[PHASE 1] ✓ Detected domain: {job_requirements['domain']}")
-        print(f"[PHASE 1] ✓ Required skills: {', '.join(job_requirements['required_skills'][:5])}")
-        
-        # PHASE 2: Filter resume for matching content (strict boundary)
+
         print("\n[PHASE 2] Filtering resume for job-relevant content...")
         resume_match = self._filter_resume_by_job(resume_text, job_requirements)
         print(f"[PHASE 2] ✓ Found {len(resume_match['projects'])} relevant project(s)")
         print(f"[PHASE 2] ✓ Found {len(resume_match['technologies'])} matching technologies")
-        
+
         if not resume_match['technologies']:
             print(f"[PHASE 2] ⚠ WARNING: No matching technologies found!")
-        
-        # PHASE 3: Generate email using only approved data
-        print("\n[PHASE 3] Generating email with filtered data...")
+
+        print("\n[PHASE 3] Generating email...")
         prompt = self._create_3phase_prompt(
             job_requirements,
             resume_match,
             company_name,
             internship_title
         )
-        
-        try:
-            if self.use_groq:
-                email = await self._generate_with_groq(prompt)
-            elif self.use_gemini:
-                email = await self._generate_with_gemini(prompt)
-            else:
-                print("[PIPELINE] ❌ No LLM service available")
-                return None
-            
-            # Check if generation failed
-            if not email:
-                print(f"\n[PIPELINE] ⚠️ Email generation returned None")
-                print(f"[PIPELINE] This usually means:")
-                print(f"  1. Safety filters blocked the content (most common)")
-                print(f"  2. API error or timeout")
-                print(f"  3. Invalid API key")
-                return None
-            
-            # VALIDATION: Check for contamination
-            validation_result = self._validate_email(email, resume_match)
-            if not validation_result['valid']:
-                print(f"\n[VALIDATION] ❌ Email failed validation: {validation_result['reason']}")
-                print(f"[VALIDATION] Returning email anyway since it passed generation")
-                # Return email anyway - validation is helpful but not blocking
-                return email
-            
-            print(f"[VALIDATION] ✓ Email passed all validation checks")
-            
-            print(f"\n{'='*60}")
-            print(f"[PIPELINE] Email generation complete")
-            print(f"{'='*60}\n")
-            
-            return email
-            
-        except Exception as e:
-            print(f"[PIPELINE] ❌ Error in generation: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-    
+
+        email_body = await self._generate_with_gemini(prompt)
+
+        if not email_body:
+            error_hint = f"Gemini API returned empty result. Check GEMINI_API_KEY validity, quota, and that the model '{self.gemini_model}' is accessible."
+            print(f"\n[PIPELINE] ⚠️ {error_hint}")
+            raise RuntimeError(error_hint)
+
+        # Old-style subject generation for fallback path
+        subject = await self.generate_subject_line(
+            job_title=internship_title,
+            company_name=company_name
+        )
+
+        print(f"\n[PIPELINE] Email generation complete (fallback path)")
+        return {"subject": subject, "body": email_body}
+
     def _extract_job_requirements(self, job_description: str, job_title: str) -> Dict:
         """
         PHASE 1: Extract job requirements (deterministic, non-creative)
@@ -418,7 +399,81 @@ Every output ends with: "I've attached my resume below for more details on the p
             "projects": unique_projects[:2],  # Top 2 relevant projects
             "has_relevant_experience": len(matching_technologies) > 0 or len(unique_projects) > 0
         }
-    
+
+    def _create_structured_prompt(
+        self,
+        extracted_data: Dict,
+        internship_description: str,
+        internship_title: str,
+        company_name: str,
+    ) -> str:
+        """
+        Generate a prompt that uses pre-extracted structured resume data
+        (skills, projects, experience, achievements) instead of running
+        the deterministic Phase 1 / Phase 2 parsing.
+
+        The model sees the candidate's actual pre-parsed background and can
+        write a much richer, more specific email.
+        """
+        skills = extracted_data.get("skills", [])
+        projects = extracted_data.get("projects", [])
+        experience = extracted_data.get("experience", [])
+        achievements = extracted_data.get("achievements", [])
+
+        # Format sections
+        skills_block = "\n".join(f"  - {s}" for s in skills) if skills else "  (none listed)"
+        projects_block = ""
+        for p in projects:
+            techs = ", ".join(p.get("tech_stack", []))
+            projects_block += f"  - {p.get('name', '')}: {p.get('description', '')} [{techs}]\n"
+        exp_block = ""
+        for e in experience:
+            highlights = "\n      • ".join(e.get("highlights", []))
+            exp_block += f"  - {e.get('role', '')} @ {e.get('company', '')} ({e.get('duration', '')})\n      • {highlights}\n"
+        ach_block = "\n".join(f"  - {a}" for a in achievements) if achievements else "  (none listed)"
+
+        prompt = f"""GENERATION TASK: Write a professional internship cold email
+
+## PRE-EXTRACTED RESUME DATA (ONLY DATA — DO NOT FABRICATE):
+
+**Technical Skills:**
+{skills_block}
+
+**Projects:**
+{projects_block}
+
+**Experience:**
+{exp_block}
+
+**Achievements:**
+{ach_block}
+
+## JOB TARGET:
+- Position: {internship_title}
+- Company: {company_name}
+- Description: {internship_description[:1000] if internship_description else 'N/A'}
+
+## STRICT RULES:
+
+1. **RESUME BOUNDARY**: You MUST ONLY reference the specific skills, projects, experience entries, and achievements listed above.  Do NOT fabricate details.
+2. **PROJECT-FIRST**: At least 50% of the email must focus on ONE specific project from the Projects section.  Describe it concretely.
+3. **ANTI-GENERIC**: Do NOT use "passionate", "highly motivated", "various projects", "multiple technologies", "several".
+4. **LENGTH**: 140–180 words.
+5. **CLOSING**: End with: "I've attached my resume below for more details on the project and related work."
+
+## INSTRUCTIONS:
+
+Write a concise, professional email that:
+- Opens with a line showing you know what {company_name} does in the relevant space.
+- Introduces yourself as someone who has built things relevant to this role.
+- Devotes the core paragraph to ONE project from the list — describe what it does, the problem it solved, and the tech stack used.
+- Connects the project to the role you're applying for.
+- Closes with an offer to discuss further and the required closing line.
+
+Write ONLY the email body (no subject, no signature):
+"""
+        return prompt
+
     def _create_3phase_prompt(
         self,
         job_requirements: Dict,
@@ -633,34 +688,10 @@ Write ONLY the email body (no subject, no signature):
         # All checks passed
         return {"valid": True, "reason": "All validation passed"}
     
-    async def _generate_with_groq(self, prompt: str) -> Optional[str]:
-        """Generate email using Groq API"""
-        try:
-            chat_completion = self.groq_client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.system_instruction if hasattr(self, 'system_instruction') else "You are an expert at writing professional cold emails following strict rules about resume accuracy."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                model="llama3-70b-8192",
-                temperature=0.7,  # Slightly lower for more deterministic output
-                max_tokens=600,
-            )
-            
-            email_text = chat_completion.choices[0].message.content.strip()
-            return email_text
-            
-        except Exception as e:
-            print(f"[GROQ] API error: {e}")
-            return None
-    
     async def _generate_with_gemini(self, prompt: str, retry_count: int = 0) -> Optional[str]:
         """Generate email using Gemini API with safety filter and rate limit handling"""
+        model_name = self.gemini_model
+        print(f"[GEMINI] Calling model={model_name} prompt_len={len(prompt)} retry={retry_count}")
         try:
             from google.genai import types
             import asyncio
@@ -675,7 +706,7 @@ Write ONLY the email body (no subject, no signature):
             
             # Generate content using the new API
             response = self.genai_client.models.generate_content(
-                model='gemini-2.0-flash-exp',
+                model=model_name,
                 contents=prompt,
                 config=config
             )
@@ -694,9 +725,12 @@ Write ONLY the email body (no subject, no signature):
                         # Try with simplified, more neutral prompt
                         return await self._generate_with_gemini_simplified(prompt)
             
+            print(f"[GEMINI] ✓ Response received finish_reason={candidate.finish_reason if hasattr(response, 'candidates') and response.candidates else 'unknown'}")
+            
             # Check if response has text
             if response.text:
                 email_text = response.text.strip()
+                print(f"[GEMINI] ✓ Text generated: {len(email_text)} chars")
                 return email_text
             else:
                 print("[GEMINI] No text in response - attempting fallback")
@@ -724,9 +758,8 @@ Write ONLY the email body (no subject, no signature):
                     print(f"[GEMINI] ❌ Cannot retry - quota exhausted")
                     print(f"[GEMINI] Solutions:")
                     print(f"[GEMINI]   1. Wait for quota reset (usually daily)")
-                    print(f"[GEMINI]   2. Use GROQ_API_KEY instead (add to .env)")
-                    print(f"[GEMINI]   3. Upgrade Gemini API plan")
-                    return None
+                    print(f"[GEMINI]   2. Upgrade Gemini API plan")
+                    raise RuntimeError(f"Gemini quota exhausted: {str(e)[:300]}") from e
             
             # Check for safety filter blocks
             elif 'safety' in error_msg or 'blocked' in error_msg or 'filter' in error_msg:
@@ -734,10 +767,10 @@ Write ONLY the email body (no subject, no signature):
                 print("[GEMINI] Attempting simplified generation...")
                 return await self._generate_with_gemini_simplified(prompt)
             
-            # Other errors
+            # Other errors — preserve the actual API error message
             else:
                 print(f"[GEMINI] API error: {e}")
-                return None
+                raise RuntimeError(f"Gemini API error: {str(e)}") from e
     
     async def _generate_with_gemini_simplified(self, original_prompt: str) -> Optional[str]:
         """
@@ -842,25 +875,27 @@ Write only the email body (no subject line, no signature):"""
                 safety_settings=ultra_safe_settings
             )
             
-            print("[GEMINI] Using simplified prompt with ultra-safe settings...")
+            print(f"[GEMINI] Using simplified prompt with ultra-safe settings (prompt_len={len(simplified_prompt)})...")
             
             response = self.genai_client.models.generate_content(
-                model='gemini-2.0-flash-exp',
+                model=self.gemini_model,
                 contents=simplified_prompt,
                 config=config
             )
             
             if response.text:
                 email_text = response.text.strip()
-                print("[GEMINI] ✓ Simplified generation successful")
+                print(f"[GEMINI] ✓ Simplified generation successful: {len(email_text)} chars")
                 return email_text
             else:
-                print("[GEMINI] Simplified generation also failed")
-                return None
+                print("[GEMINI] Simplified generation also failed (empty response)")
+                raise RuntimeError("Gemini simplified fallback also returned empty response")
                 
+        except RuntimeError:
+            raise
         except Exception as e:
-            print(f"[GEMINI] Simplified generation error: {e}")
-            return None
+            print(f"[GEMINI] ❌ Simplified generation error: {e}")
+            raise RuntimeError(f"Gemini simplified fallback failed: {str(e)}") from e
     
     async def generate_subject_line(self, job_title: str, company_name: str) -> str:
         """Generate a subject line following InternFlow project-first specification"""
@@ -876,6 +911,479 @@ Write only the email body (no subject line, no signature):"""
         ]
         
         return random.choice(templates)
+
+    async def _generate_with_gemini_json(self, prompt: str) -> Optional[Dict]:
+        """
+        Generate a JSON response from Gemini using ``response_mime_type``.
+
+        Uses a dedicated config with ``max_output_tokens=800`` and
+        ``response_mime_type="application/json"`` so the model returns
+        proper structured output that never gets cut off mid-sentence.
+        """
+        from google.genai import types
+
+        config = types.GenerateContentConfig(
+            temperature=0.7,
+            max_output_tokens=800,
+            safety_settings=self.safety_settings,
+            response_mime_type="application/json",
+        )
+
+        try:
+            response = self.genai_client.models.generate_content(
+                model=self.gemini_model,
+                contents=prompt,
+                config=config,
+            )
+
+            text = response.text.strip() if response.text else ""
+            if not text:
+                print("[GEMINI_JSON] Empty response")
+                return None
+
+            import json, re
+            match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+            raw = json.loads(match.group(1) if match else text)
+
+            subject = (raw.get("subject") or "").strip()
+            body = (raw.get("body") or "").strip()
+
+            if not subject or not body:
+                print(f"[GEMINI_JSON] Incomplete: subject={bool(subject)} body={bool(body)}")
+                return None
+
+            print(f"[GEMINI_JSON] ✓ subject={len(subject)}ch body={len(body)}ch "
+                  f"({len(body.split())} words)")
+            return {"subject": subject, "body": body}
+
+        except Exception as e:
+            print(f"[GEMINI_JSON] ❌ Failed: {e}")
+            return None
+
+    # ── Structured Job Requirement Extraction ──────────────────────
+
+    _JOB_EXTRACT_PROMPT = """You are a job description parser. Extract structured JSON from the job posting below.
+
+Return ONLY valid JSON with exactly this structure — no markdown, no explanation:
+
+{
+  "required_skills": ["skill1", "skill2", ...],
+  "preferred_skills": ["skill1", "skill2", ...],
+  "core_responsibilities": ["responsibility1", "responsibility2", ...],
+  "technologies_mentioned": ["tech1", "tech2", ...],
+  "domain": "brief description of the domain or industry"
+}
+
+Rules:
+- "required_skills" — explicitly stated must-haves (languages, frameworks, methodologies).
+- "preferred_skills" — nice-to-haves, bonus points, or "plus" items.
+- "core_responsibilities" — what the role actually does day-to-day (2-5 items).
+- "technologies_mentioned" — any specific tools, platforms, libraries named anywhere.
+- "domain" — one short phrase like "embedded firmware", "full-stack web", "AI/ML".
+- If a section has no data, use an empty array [].
+
+Job posting:
+"""
+
+    async def _extract_job_requirements_structured(self, job_description: str, job_title: str) -> Optional[Dict]:
+        """
+        Call Gemini once to extract structured requirements from a job posting.
+
+        Returns a dict with ``required_skills``, ``preferred_skills``,
+        ``core_responsibilities``, ``technologies_mentioned``, ``domain``,
+        or ``None`` on failure.
+        """
+        combined = f"Title: {job_title}\n\nDescription:\n{job_description}"
+        prompt = self._JOB_EXTRACT_PROMPT + "\n" + combined
+
+        try:
+            from google.genai import types
+
+            config = types.GenerateContentConfig(
+                temperature=0.2,
+                max_output_tokens=1024,
+                safety_settings=self.safety_settings,
+            )
+
+            response = self.genai_client.models.generate_content(
+                model=self.gemini_model,
+                contents=prompt,
+                config=config,
+            )
+
+            text = response.text.strip() if response.text else ""
+            if not text:
+                print("[JOB_EXTRACT] Gemini returned empty response — falling back to deterministic")
+                return None
+
+            import json, re
+            match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+            raw = match.group(1) if match else text
+            data = json.loads(raw)
+
+            validated = {
+                "required_skills": data.get("required_skills", []),
+                "preferred_skills": data.get("preferred_skills", []),
+                "core_responsibilities": data.get("core_responsibilities", []),
+                "technologies_mentioned": data.get("technologies_mentioned", []),
+                "domain": data.get("domain", ""),
+            }
+            print(f"[JOB_EXTRACT] ✓ Domain={validated['domain']}, "
+                  f"req_skills={len(validated['required_skills'])}, "
+                  f"pref_skills={len(validated['preferred_skills'])}, "
+                  f"resp={len(validated['core_responsibilities'])}, "
+                  f"techs={len(validated['technologies_mentioned'])}")
+            return validated
+
+        except Exception as e:
+            print(f"[JOB_EXTRACT] ❌ Failed: {e}")
+            return None
+
+    # ── Resume-to-Job Matching ──────────────────────────────────────
+
+    def _match_resume_to_job(self, extracted_data: Dict, job_reqs: Dict) -> List[str]:
+        """
+        Compare structured resume data against job requirements and produce
+        2–3 explicit match statements like:
+
+          "candidate has a project 'Foo' using TypeScript & React,
+           which matches the job's need for frontend development"
+
+        Uses simple set overlap for skills/technologies first, then falls
+        back to matching project descriptions and experience highlights
+        against job responsibilities.
+        """
+        matches: List[str] = []
+        seen_project_names: set = set()
+        seen_exp_indices: set = set()
+
+        skill_overlap = self._skill_overlap_statements(
+            extracted_data.get("skills", []),
+            job_reqs.get("required_skills", []) + job_reqs.get("preferred_skills", []),
+            job_reqs.get("technologies_mentioned", []),
+        )
+        matches.extend(skill_overlap)
+
+        project_matches = self._project_overlap_statements(
+            extracted_data.get("projects", []),
+            job_reqs.get("technologies_mentioned", []),
+            job_reqs.get("core_responsibilities", []),
+            seen_project_names,
+        )
+        matches.extend(project_matches)
+
+        exp_matches = self._experience_overlap_statements(
+            extracted_data.get("experience", []),
+            job_reqs.get("core_responsibilities", []),
+            job_reqs.get("technologies_mentioned", []),
+            seen_exp_indices,
+        )
+        matches.extend(exp_matches)
+
+        # Limit to 3 strongest — skill matches are always relevant, then
+        # take up to 2 project/experience matches on top.
+        result = matches[:3]
+
+        if not result:
+            result.append(
+                f"candidate has a background in "
+                f"{', '.join(extracted_data.get('skills', [])[:3]) or 'general engineering'} "
+                f"and is eager to apply their learning to the {job_reqs.get('domain', 'role')}"
+            )
+
+        for i, m in enumerate(result):
+            print(f"[MATCH] {i+1}. {m}")
+        return result
+
+    @staticmethod
+    def _skill_overlap_statements(
+        candidate_skills: List[str],
+        all_job_skills: List[str],
+        job_techs: List[str],
+    ) -> List[str]:
+        """Produce match statements from skill/tech set overlap."""
+        if not candidate_skills or not all_job_skills:
+            return []
+
+        cs_lower = {s.strip().lower() for s in candidate_skills}
+        js_lower = {s.strip().lower() for s in all_job_skills}
+        techs_lower = {t.strip().lower() for t in job_techs}
+
+        overlapping = cs_lower & js_lower
+        overlapping_techs = cs_lower & techs_lower
+        all_overlap = overlapping | overlapping_techs
+
+        if not all_overlap:
+            return []
+
+        overlap_list = sorted(all_overlap)
+        display = overlap_list[:5]
+        display_str = display[0] if len(display) == 1 else (
+            ", ".join(display[:-1]) + f" and {display[-1]}"
+        )
+        return [f"candidate has skills in {display_str}, which the job explicitly requires"]
+
+    def _project_overlap_statements(
+        self,
+        projects: List[Dict],
+        job_techs: List[str],
+        job_resp: List[str],
+        seen: set,
+    ) -> List[str]:
+        """Match projects against job technologies and responsibilities."""
+        if not projects:
+            return []
+
+        techs_lower = {t.strip().lower() for t in job_techs}
+        resp_lower_words = set()
+        for r in job_resp:
+            resp_lower_words.update(r.lower().split())
+
+        statements = []
+        for proj in projects:
+            pname = proj.get("name", "")
+            if not pname or pname.lower() in seen:
+                continue
+
+            proj_techs = [t.strip().lower() for t in (proj.get("tech_stack") or [])]
+            proj_desc = (proj.get("description") or "").lower()
+
+            # Tech overlap
+            matching_techs = [t for t in proj_techs if t in techs_lower]
+            # Responsibility keyword overlap in description
+            desc_words = set(proj_desc.split())
+            matching_resp_words = desc_words & resp_lower_words
+
+            if matching_techs or matching_resp_words:
+                tech_str = ", ".join(matching_techs[:3]) if matching_techs else ""
+                pivot = (f"which uses {tech_str}, matching the job's tech requirements"
+                         if matching_techs else
+                         f"which involves {' '.join(list(matching_resp_words)[:3])}, "
+                         f"matching a core responsibility")
+                statements.append(
+                    f"candidate has a project '{pname}' ({proj.get('description', '')[:100]}), "
+                    f"{pivot}"
+                )
+                seen.add(pname.lower())
+
+        return statements[:2]
+
+    def _experience_overlap_statements(
+        self,
+        experience: List[Dict],
+        job_resp: List[str],
+        job_techs: List[str],
+        seen: set,
+    ) -> List[str]:
+        """Match experience highlights against job responsibilities."""
+        if not experience:
+            return []
+
+        techs_lower = {t.strip().lower() for t in job_techs}
+        resp_lower_words = set()
+        for r in job_resp:
+            resp_lower_words.update(r.lower().split())
+
+        statements = []
+        for i, exp in enumerate(experience):
+            if i in seen:
+                continue
+
+            highlights = [h.lower() for h in (exp.get("highlights") or [])]
+            role = exp.get("role", "")
+            company = exp.get("company", "")
+
+            # Check if any highlight words overlap with responsibilities or techs
+            matching_words = set()
+            for h in highlights:
+                h_words = set(h.split())
+                matching_words.update(h_words & resp_lower_words)
+                # Also check tech overlap inside highlights
+                matching_words.update(h_words & techs_lower)
+
+            if matching_words:
+                top_words = list(matching_words)[:3]
+                statements.append(
+                    f"candidate's experience as {role} at {company} involved "
+                    f"{' '.join(top_words)}, which maps to the job's "
+                    f"requirement for {', '.join(job_resp[:2]).lower()}"
+                )
+                seen.add(i)
+
+        return statements[:2]
+
+    # ── Matched Prompt Builder ──────────────────────────────────────
+
+    _STRUCTURED_PROMPT_CONFIG = {
+        "temperature": 0.7,
+        "max_output_tokens": 800,
+        "safety_settings": None,  # set at call time
+        "response_mime_type": "application/json",
+    }
+
+    def _create_matched_prompt(
+        self,
+        match_statements: List[str],
+        job_reqs: Dict,
+        internship_title: str,
+        company_name: str,
+        candidate_name: str = "",
+    ) -> str:
+        """
+        Build the email-generation prompt that instructs Gemini to return
+        **JSON** with ``subject`` and ``body`` fields.  The model receives
+        only the explicit match statements — not raw resume text or full
+        structured data.
+
+        Rules are tighter than the old prompt: no "following your work"
+        openers, body must be 100–130 words, and at least one match must
+        be referenced by name.
+        """
+        matches_block = "\n".join(f"  • {m}" for m in match_statements)
+
+        skills = ", ".join(job_reqs.get("required_skills", [])[:5]) or "N/A"
+        resp = "\n".join(f"  • {r}" for r in job_reqs.get("core_responsibilities", []) or ["N/A"])
+        domain = job_reqs.get("domain", "software development")
+
+        prompt = f"""GENERATION TASK: Write a professional internship cold email.
+
+Return ONLY valid JSON with exactly these two keys — no markdown, no explanation:
+
+{{"subject": "the subject line here", "body": "the email body here"}}
+
+## MATCHED DATA (THIS IS THE ONLY DATA YOU MAY USE):
+
+The following explicit matches were found between the candidate's resume and the job requirements:
+
+{matches_block}
+
+## JOB TARGET:
+- Position: {internship_title}
+- Company: {company_name}
+- Domain: {domain}
+- Required Skills: {skills}
+- Core Responsibilities:
+{resp}
+
+## CANDIDATE NAME (use this in the subject line):
+{candidate_name or "the applicant"}
+
+## STRICT RULES:
+
+1. **MATCH BOUNDARY**: You MUST ONLY reference the content in the Matched Data section above.  Do NOT fabricate additional projects, skills, or experience.
+
+2. **MANDATORY PROJECT/ACHIEVEMENT MENTION**: The body MUST reference at least ONE specific project name or achievement from the Matched Data section by its actual name.  A generic reference like "my project work" does not count.
+
+3. **FORBIDDEN OPENERS**: Do NOT open with "I've been following your work in", "I'm excited to apply to", or "I've been tracking {company_name}'s growth".  Open directly with the candidate's relevant match.
+
+4. **BODY LENGTH**: The body MUST be 100–130 words.  Be concise — every sentence should add a concrete detail.
+
+5. **ANTI-GENERIC**: Forbidden phrases: "passionate", "highly motivated", "various projects", "multiple technologies", "several projects", "team player".
+
+6. **SUBJECT LINE**: Concise, includes {candidate_name or "the applicant"} and {company_name}.  Do NOT use generic templates like "Application for {internship_title}".
+
+## INSTRUCTIONS:
+
+Write a tight, professional email where:
+- Subject line is unique and mentions the candidate and company.
+- First sentence immediately states the candidate's relevant match (project/experience/skill).
+- Core paragraph (1–2 sentences) expands on ONE specific matched project or experience — describe it concretely.
+- Final sentence connects the match to the role and offers to discuss further.
+- No opening pleasantries, no "I've been following" language.
+
+Return ONLY JSON with "subject" and "body" keys."""
+        return prompt
+
+    # ── Structured Resume Extraction ─────────────────────────────────
+
+    _EXTRACT_PROMPT = """You are a resume parser. Extract structured JSON from the resume text below.
+
+Return ONLY valid JSON with exactly this structure — no markdown, no explanation, no extra text:
+
+{
+  "skills": ["skill1", "skill2", ...],
+  "projects": [
+    {
+      "name": "Project Name",
+      "description": "Brief description of the project",
+      "tech_stack": ["tech1", "tech2", ...]
+    }
+  ],
+  "experience": [
+    {
+      "role": "Job Title",
+      "company": "Company Name",
+      "duration": "Start – End",
+      "highlights": ["Key achievement or responsibility", "Another highlight"]
+    }
+  ],
+  "achievements": ["Certification or award", "Notable metric or result"]
+}
+
+Rules:
+- If a section has no data, use an empty array [].
+- For "skills", list individual technical skills — programming languages, frameworks, tools, platforms.
+- For "projects", include name, a 1-sentence description of what it does, and the key technologies used.
+- For "experience", include role, company, duration string, and 2–3 concise highlights.
+- For "achievements", include certifications, competition wins, notable metrics, or awards.
+- Keep descriptions concise.  Do not fabricate.
+
+Resume text:
+"""
+
+    async def extract_structured_resume(self, resume_text: str) -> Optional[Dict]:
+        """
+        Call Gemini once to parse resume text into structured JSON.
+
+        Returns a dict with keys ``skills``, ``projects``, ``experience``,
+        ``achievements``, or ``None`` on failure.
+        """
+        prompt = self._EXTRACT_PROMPT + "\n" + resume_text
+
+        try:
+            from google.genai import types
+
+            config = types.GenerateContentConfig(
+                temperature=0.2,
+                max_output_tokens=2048,
+                safety_settings=self.safety_settings,
+            )
+
+            response = self.genai_client.models.generate_content(
+                model=self.gemini_model,
+                contents=prompt,
+                config=config,
+            )
+
+            text = response.text.strip() if response.text else ""
+            if not text:
+                print("[EXTRACT] Gemini returned empty response")
+                return None
+
+            # Strip markdown fences if present
+            import json
+            import re
+            match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+            raw = match.group(1) if match else text
+
+            data = json.loads(raw)
+
+            # Validate shape
+            validated = {
+                "skills": data.get("skills", []),
+                "projects": data.get("projects", []),
+                "experience": data.get("experience", []),
+                "achievements": data.get("achievements", []),
+            }
+            print(f"[EXTRACT] ✓ Parsed: {len(validated['skills'])} skills, "
+                  f"{len(validated['projects'])} projects, "
+                  f"{len(validated['experience'])} experience entries, "
+                  f"{len(validated['achievements'])} achievements")
+            return validated
+
+        except Exception as e:
+            print(f"[EXTRACT] ❌ Failed: {e}")
+            return None
 
 
 # Singleton instance

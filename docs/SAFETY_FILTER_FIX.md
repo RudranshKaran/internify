@@ -163,9 +163,9 @@ Look for these in terminal:
    - Certain words in resume might trigger filters
    - Try with a simpler resume
 
-3. **Switch to Groq (if available)**
-   - Set `GROQ_API_KEY` in `.env`
-   - Groq has fewer safety restrictions
+3. **Check quota and rate limits**
+   - Verify `GEMINI_API_KEY` is valid in `.env`
+   - Check Google AI Studio for usage dashboard
 
 ---
 

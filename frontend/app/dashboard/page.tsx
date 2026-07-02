@@ -135,21 +135,63 @@ export default function DashboardPage() {
     if (!searchQuery.trim()) return
 
     setLoading(true)
+    setInternships([])
+
     try {
-      console.log('Dashboard: Searching for internships with query:', searchQuery)
-      const response = await internshipsAPI.search(searchQuery)
-      console.log('Dashboard: Internship search response:', response.data)
-      setInternships(response.data.internships || [])
-      if (response.data.internships?.length === 0) {
-        toast.info('No internships found. Try different keywords.')
+      // ── Phase 1: trigger background discovery ──
+      console.log('Dashboard: Triggering search for:', searchQuery)
+      const triggerRes = await internshipsAPI.search(searchQuery)
+      console.log('Dashboard: Search triggered:', triggerRes.data)
+
+      // ── Phase 2: fetch stored companies ──
+      // Give the background task a moment to start writing, then grab the
+      // first page of results from the discovered_companies table.
+      console.log('Dashboard: Fetching discovered companies…')
+      const listRes = await internshipsAPI.listDiscovered({ limit: 50 })
+      console.log('Dashboard: Companies response:', listRes.data)
+
+      // Safely extract companies — the shape changed from
+      // { internships: […] } to { companies: […] }.
+      const companies: any[] =
+        listRes.data?.companies ?? listRes.data?.internships ?? []
+
+      // Map discovered_companies fields to what InternshipCard expects
+      const mapped = companies.map((c: any) => ({
+        id: c.id,
+        title: c.role_title || '',
+        company: c.company_name || '',
+        location: c.location || '',
+        description: c.job_description_snippet || '',
+        link: c.source_url || '',
+        // The rest are empty for now (enriched later)
+        posted_at: c.last_seen_at || c.discovered_at,
+        contact_email: undefined,
+        contact_phone: undefined,
+        contact_website: undefined,
+        domain: c.domain,
+        email_status: c.email_status,
+      }))
+
+      setInternships(mapped)
+
+      if (mapped.length === 0) {
+        toast.info(
+          'Search is running in the background. Results will appear here once companies are discovered. Try searching again in a moment.'
+        )
       } else {
-        toast.success(`Found ${response.data.internships.length} internships!`)
+        toast.success(`Found ${mapped.length} companies!`)
       }
     } catch (error: any) {
-      console.error('Dashboard: Internship search error:', error)
-      console.error('Dashboard: Error response:', error.response?.data)
-      const errorMessage = error.response?.data?.detail || error.message || 'Failed to search internships'
+      console.error('Dashboard: Search error:', error)
+      // Guard against TypeError (e.g. reading .data on undefined) that
+      // doesn't carry a .response property — those are client-side bugs,
+      // not network failures.
+      const isClientError = !error.response
+      const errorMessage = isClientError
+        ? 'Something went wrong processing the search results. Please try again.'
+        : error.response?.data?.detail || error.message || 'Failed to search internships'
       toast.error(errorMessage)
+      setInternships([])
     } finally {
       setLoading(false)
     }
@@ -237,12 +279,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Internship Results */}
-      {internships.length > 0 && (
+      {/* Internship Results — visible during loading too so the spinner shows */}
+      {(loading || internships.length > 0) && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">3. Select an Internship to Apply</h2>
-            {selectedInternship && (
+            {selectedInternship && !loading && (
               <button
                 onClick={() => handleInternshipSelect(selectedInternship)}
                 className="px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg hover:opacity-90 transition-all font-medium shadow-md hover:shadow-lg flex items-center gap-2"
@@ -256,6 +298,10 @@ export default function DashboardPage() {
           </div>
           {loading ? (
             <Loader text="Searching for internships..." />
+          ) : internships.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">
+              No companies found yet. Try a different search term.
+            </p>
           ) : (
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

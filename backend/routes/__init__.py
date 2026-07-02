@@ -4,6 +4,7 @@ from .resume import router as resume_router
 from .internships import router as internships_router
 from .llm import router as llm_router
 from .email import router as email_router
+from .companies import router as companies_router
 
 __all__ = [
     "auth_router",
@@ -11,4 +12,5 @@ __all__ = [
     "internships_router",
     "llm_router",
     "email_router",
+    "companies_router",
 ]

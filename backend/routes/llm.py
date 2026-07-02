@@ -31,63 +31,71 @@ async def generate_email(
     
     try:
         user_id = extract_user_id(payload)
-        
-        # If resume_text is empty, fetch from database
+        user_email = payload.get("email", "")
+        candidate_name = payload.get("user_metadata", {}).get("full_name", "") or payload.get("email", "").split("@")[0]
+
+        # Fetch resume from database — includes extracted_data if available
         resume_text = request.resume_text
+        extracted_data = None
+
         if not resume_text or resume_text.strip() == "":
             print(f"[LLM] No resume_text in request, fetching from database for user: {user_id}")
             resume = await supabase_service.get_latest_resume(user_id)
-            
+
             if not resume:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="No resume found. Please upload a resume first."
                 )
-            
+
             resume_text = resume["extracted_text"]
+            extracted_data = resume.get("extracted_data")
             print(f"[LLM] Fetched resume from database, length: {len(resume_text)} characters")
+            if extracted_data:
+                print(f"[LLM] Found pre-extracted structured data")
+            else:
+                print(f"[LLM] No pre-extracted data — falling back to deterministic parsing")
         else:
             print(f"[LLM] Using resume_text from request, length: {len(resume_text)} characters")
-        
-        # Log first 200 chars of resume to verify content
-        print(f"[LLM] Resume preview: {resume_text[:200]}...")
+
+        print(f"[LLM] Candidate name: {candidate_name}")
         print(f"[LLM] ===== EMAIL GENERATION FLOW =====")
-        print(f"[LLM] STEP 1: Resume parsed (length: {len(resume_text)} chars)")
-        print(f"[LLM] STEP 2: Job details - {request.internship_title} at {request.company_name}")
-        print(f"[LLM] STEP 2: Job description received: {request.internship_description[:300] if request.internship_description else 'EMPTY!'}...")
-        print(f"[LLM] STEP 2: Full job description length: {len(request.internship_description) if request.internship_description else 0} chars")
-        print(f"[LLM] STEP 3: Matching resume experience with job requirements...")
-        
-        # Generate email body using LLM
-        email_body = await llm_service.generate_email(
+
+        # Generate email using LLM — returns dict with subject + body
+        result = await llm_service.generate_email(
             resume_text=resume_text,
             internship_description=request.internship_description,
             internship_title=request.internship_title,
-            company_name=request.company_name
+            company_name=request.company_name,
+            extracted_data=extracted_data,
+            candidate_name=candidate_name,
         )
-        
-        print(f"[LLM] STEP 3: Email generated successfully (length: {len(email_body) if email_body else 0} chars)")
-        
-        if not email_body:
+
+        subject = (result.get("subject") or "").strip()
+        body = (result.get("body") or "").strip()
+
+        if not subject or not body:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate email. This may be due to AI safety filters. Please try a different internship or check your resume content."
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="LLM provider returned an incomplete response."
             )
-        
-        # Generate subject line
-        subject = await llm_service.generate_subject_line(
-            job_title=request.internship_title,
-            company_name=request.company_name
-        )
-        
+
+        print(f"[LLM] Email generated — subject: {len(subject)}ch, body: {len(body)}ch ({len(body.split())} words)")
+
         return EmailGenerateResponse(
             subject=subject,
-            body=email_body,
+            body=body,
             success=True
         )
     
     except HTTPException:
         raise
+    except RuntimeError as e:
+        # LLM provider errors (invalid key, quota, timeout) → 502 Bad Gateway
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

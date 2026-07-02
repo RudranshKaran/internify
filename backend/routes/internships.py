@@ -1,85 +1,141 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from routes.utils import verify_token
+from routes.utils import verify_token, extract_user_id
 from services.scraper_service import scraper_service
 from services.supabase_service import supabase_service
-from models.internship import InternshipResponse
-from typing import Optional, List
+from typing import Optional
+from urllib.parse import urlparse
+import asyncio
 
 router = APIRouter(prefix="/internships", tags=["Internships"])
+
+
+@router.get("")
+async def list_discovered_companies(
+    email_status: Optional[str] = Query(None, description="Filter by email status: not_found, found, verified"),
+    limit: int = Query(50, ge=1, le=200, description="Results per page"),
+    cursor: Optional[str] = Query(None, description="Opaque cursor from previous page for pagination"),
+    payload: dict = Depends(verify_token)
+):
+    """
+    List companies discovered during searches — reads from the
+    ``discovered_companies`` table.  Never calls SerpAPI.
+
+    Ordered by ``last_seen_at`` descending so the freshest discoveries
+    appear first.  Supports cursor-based pagination: omit *cursor* on
+    the first request, then pass the ``next_cursor`` from the response.
+    When ``next_cursor`` is ``null`` there are no more pages.
+    """
+    try:
+        user_id = extract_user_id(payload)
+        result = await supabase_service.get_discovered_companies_paginated(
+            user_id=user_id,
+            email_status=email_status,
+            limit=limit,
+            cursor=cursor,
+        )
+
+        return {
+            "success": True,
+            "companies": result["data"],
+            "count": len(result["data"]),
+            "next_cursor": result["next_cursor"],
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list companies: {str(e)}"
+        )
+
+
+# ── Background pipeline ──────────────────────────────────────────
+
+async def _run_discovery_pipeline(
+    user_id: str,
+    role: str,
+    location: Optional[str],
+) -> None:
+    """
+    Fire SerpAPI variants and upsert results into discovered_companies.
+    Runs as a fire-and-forget background task so the endpoint returns
+    immediately.  Every per-item error is caught so a single failure
+    never cancels the rest of the pipeline.
+    """
+    try:
+        all_results = await scraper_service.search_all_variants(
+            role=role,
+            location=location,
+        )
+    except Exception as e:
+        print(f"[DISCOVERY] Fatal error in SerpAPI phase: {e}")
+        return
+
+    upserted = 0
+    for job in all_results:
+        try:
+            link = job.get("link") or ""
+            domain = None
+            if link:
+                parsed = urlparse(link)
+                domain = parsed.netloc or None
+
+            company_data = {
+                "user_id": user_id,
+                "company_name": job.get("company", ""),
+                "domain": domain,
+                "role_title": job.get("title", ""),
+                "location": job.get("location"),
+                "job_description_snippet": (job.get("description") or "")[:500],
+                "source_url": link,
+                "source_query": job.get("_surfaced_by", role),
+            }
+            await supabase_service.upsert_discovered_company(company_data)
+            upserted += 1
+        except Exception as e:
+            print(f"[DISCOVERY] Failed to upsert company '{job.get('company')}': {e}")
+
+    print(f"[DISCOVERY] Pipeline finished — {upserted} companies upserted for user {user_id}")
 
 
 @router.get("/search")
 async def search_internships(
     role: str = Query(..., description="Internship role or title to search for"),
     location: Optional[str] = Query(None, description="Location filter"),
-    limit: int = Query(10, ge=1, le=50, description="Maximum number of results"),
     payload: dict = Depends(verify_token)
 ):
     """
-    Search for internship listings using SerpAPI
-    
-    Args:
-        role: Internship title or role (e.g., "Software Engineer Intern")
-        location: Optional location filter
-        limit: Maximum number of results (1-50)
-    
-    Returns:
-        List of internship listings from LinkedIn/Google Jobs
+    Search for internship listings using multiple SerpAPI query variants.
+
+    Generates 3–5 varied queries from the *role* string (synonym expansion,
+    gerund forms, etc.), then kicks off the full pipeline — SerpAPI calls,
+    deduplication, and upserts to ``discovered_companies`` — as a **background
+    task** so this endpoint returns immediately.
+
+    The frontend can poll ``GET /internships`` (the dashboard list endpoint)
+    to see results as they arrive.  If a single variant or upsert fails it
+    does **not** stop the others.
     """
-    
     try:
-        # Search for internships
-        internships = await scraper_service.search_internships(
-            query=role,
-            location=location,
-            limit=limit
+        user_id = extract_user_id(payload)
+
+        # Fire-and-forget: the pipeline runs in a separate asyncio task
+        asyncio.create_task(
+            _run_discovery_pipeline(
+                user_id=user_id,
+                role=role,
+                location=location,
+            )
         )
-        
-        if not internships:
-            return {
-                "success": True,
-                "internships": [],
-                "message": "No internships found matching your criteria. Try different keywords."
-            }
-        
-        # Save internships to database for future reference
-        saved_internships = []
-        for internship in internships:
-            try:
-                # Prepare internship data with new contact fields
-                internship_data = {
-                    "title": internship["title"],
-                    "company": internship["company"],
-                    "link": internship["link"],
-                    "description": internship["description"],
-                    "location": internship.get("location"),
-                    "contact_email": internship.get("contact_email"),
-                    "contact_phone": internship.get("contact_phone"),
-                    "contact_website": internship.get("contact_website")
-                }
-                
-                saved_internship = await supabase_service.save_internship(internship_data)
-                
-                if saved_internship:
-                    saved_internships.append(saved_internship)
-                else:
-                    # If saving fails, still include in results
-                    saved_internships.append(internship)
-            except Exception as e:
-                # Continue even if one internship fails to save
-                print(f"Failed to save internship '{internship.get('title')}': {e}")
-                saved_internships.append(internship)
-        
+
         return {
             "success": True,
-            "internships": saved_internships,
-            "count": len(saved_internships)
+            "message": "Search started — results will appear in the company list as they arrive.",
         }
-    
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internship search failed: {str(e)}"
+            detail=f"Failed to start search: {str(e)}"
         )
 
 

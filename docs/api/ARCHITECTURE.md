@@ -50,7 +50,7 @@
 │  │                                                            │  │
 │  │  ┌───────────────┐  ┌────────────────┐                  │  │
 │  │  │   Supabase    │  │   LLM Service  │                  │  │
-│  │  │   Service     │  │  (Groq/Gemini) │                  │  │
+│  │  │   Service     │  │  (Gemini)     │                  │  │
 │  │  │  • Auth       │  │  • Generate    │                  │  │
 │  │  │  • Database   │  │    Email       │                  │  │
 │  │  │  • Storage    │  │  • Customize   │                  │  │
@@ -68,7 +68,7 @@
     │              │              │              │
     ▼              ▼              ▼              ▼
 ┌────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-│Supabase│  │  Resend  │  │ SerpAPI  │  │Groq/Gemini│
+│Supabase│  │  Resend  │  │ SerpAPI  │  │   Gemini   │
 │(Cloud) │  │  (Email) │  │(Internshp)│  │   (AI)   │
 │        │  │          │  │          │  │          │
 │• Auth  │  │• Send    │  │• LinkedIn│  │• LLaMA-3 │
@@ -93,7 +93,7 @@ DATA FLOW:
 
 4. EMAIL GENERATION
    User selects internship → Frontend → Backend → Fetch resume
-   → Call Groq/Gemini API → Generate personalized email
+   → Call Gemini API → Generate personalized email
    → Return to Frontend → Display in editor
 
 5. SEND EMAIL
@@ -203,11 +203,11 @@ Database & Services:
 • Supabase (PostgreSQL + Auth + Storage)
 • Resend (Email API)
 • SerpAPI (Internship scraping)
-• Groq/Gemini (AI/LLM)
+• Gemini (AI/LLM)
 
 Deployment:
 • Vercel (Frontend)
-• Render/Railway (Backend)
+• Render (Backend)
 • Git/GitHub (Version control)
 
 
@@ -231,7 +231,7 @@ FREE TIER LIMITS:
 Supabase:  500MB DB, 1GB file storage, 50,000 monthly active users
 Resend:    100 emails/day, 3,000/month
 SerpAPI:   100 searches/month
-Groq:      Generous free tier, check their limits
+Gemini:    Generous free tier, check their limits
 Vercel:    Unlimited for personal projects
 Render:    750 hours/month (enough for 1 app 24/7)
 
@@ -258,4 +258,6 @@ This architecture is:
 ✅ Maintainable - Clean code structure
 ✅ Modern - Latest tech stack
 ✅ Production-ready - Error handling & monitoring
+```
+ng
 ```

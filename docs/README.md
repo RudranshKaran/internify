@@ -47,7 +47,7 @@ Database schemas, setup scripts, and migration guides.
 Setup instructions, quick starts, feature documentation, and deployment.
 
 - **START_HERE.md** ⭐ - Main entry point after refactoring
-- **DEPLOYMENT_GUIDE.md** 🚀 - Complete production deployment guide (Railway + Vercel)
+- **DEPLOYMENT_GUIDE.md** 🚀 - Complete production deployment guide (Render + Vercel)
 - **DOCUMENTATION_INDEX.md** - Complete documentation map
 - **SETUP.md** - Detailed setup instructions
 - **QUICK_START.md** - Quick start guide
@@ -207,7 +207,7 @@ Project status and testing documentation.
 - See `api/API_DOCS.md` for complete list
 
 ### Deployment
-- Backend hosted on Railway, frontend on Vercel
+- Backend hosted on Render, frontend on Vercel
 - Complete step-by-step guide in `guides/DEPLOYMENT_GUIDE.md`
 - Includes troubleshooting, monitoring, and cost estimates
 

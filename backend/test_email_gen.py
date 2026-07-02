@@ -29,10 +29,14 @@ Work on AI agents, LLM frameworks, and intelligent systems."""
     )
     
     if result:
+        subject = result.get("subject", "")
+        body = result.get("body", "")
         print("✓ SUCCESS! Generated email:")
+        print(f"Subject: {subject}")
         print("-" * 60)
-        print(result)
+        print(body)
         print("-" * 60)
+        print(f"Body word count: {len(body.split())}")
     else:
         print("✗ FAILED: Could not generate email")
 

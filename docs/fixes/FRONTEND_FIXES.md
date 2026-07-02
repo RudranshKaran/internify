@@ -120,7 +120,7 @@ Follow the guide I provided earlier to:
 
 ### 2. Get API Keys
 You'll also need these API keys (for backend):
-- **Groq API** (recommended): https://console.groq.com
+- **Gemini API**: Get a key at https://aistudio.google.com/apikey
 - **Resend API**: https://resend.com/api-keys
 - **SerpAPI**: https://serpapi.com/manage-api-key
 

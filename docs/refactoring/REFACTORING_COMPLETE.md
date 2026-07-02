@@ -229,7 +229,7 @@ If you have existing data:
 
 ### 1. Backend Deployment
 ```bash
-# If using Render/Railway
+# If using Render
 # Push to Git, service will auto-deploy
 git add .
 git commit -m "Refactor: Job terminology to Internship"

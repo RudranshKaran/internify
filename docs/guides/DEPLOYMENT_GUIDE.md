@@ -12,8 +12,8 @@ Before deploying, ensure you have:
 - ✅ All environment variables ready
 - ✅ GitHub account
 - ✅ Vercel account (for frontend)
-- ✅ Railway account (for backend)
-- ✅ API keys: SERPAPI_KEY, GROQ_API_KEY or GEMINI_API_KEY
+- ✅ Render account (for backend)
+- ✅ API keys: SERPAPI_KEY, GEMINI_API_KEY
 
 ---
 
@@ -27,8 +27,8 @@ Before deploying, ensure you have:
          │
          ↓ API Calls
 ┌─────────────────┐
-│   Railway       │  Backend (FastAPI)
-│  (Backend)      │  → https://your-api.up.railway.app
+│   Render        │  Backend (FastAPI)
+│  (Backend)      │  → https://your-api.onrender.com
 └────────┬────────┘
          │
          ↓ Database
@@ -71,65 +71,67 @@ git push -u origin main
 
 ---
 
-## Part 2: Deploy Backend (Railway)
+## Part 2: Deploy Backend (Render)
 
-### Step 1: Sign Up for Railway
+### Step 1: Sign Up for Render
 
-1. Go to [Railway](https://railway.app)
-2. Sign up with GitHub
-3. Authorize Railway to access your repositories
+1. Go to [Render](https://render.com)
+2. Sign up with GitHub (or Google/Email)
+3. Verify your email if needed
 
-### Step 2: Create New Project
+### Step 2: Create New Web Service
 
-1. Click **"New Project"**
-2. Select **"Deploy from GitHub repo"**
-3. Choose your `internflow` repository
-4. Click **"Deploy Now"**
+1. Click **"New +"** → **"Web Service"**
+2. Connect your GitHub account if not already connected
+3. Select the `internflow` repository
+4. Configure the service:
 
-**Railway will automatically:**
-- Detect it's a Python project
-- Install dependencies from `requirements.txt`
-- Start your application
-
-**Configure Settings (if needed):**
-1. Click on your service in Railway dashboard
-2. Go to **"Settings"** tab
-3. Set **"Root Directory"** to `backend`
-4. **Start Command** (if not auto-detected):
-   ```bash
-   uvicorn main:app --host 0.0.0.0 --port $PORT
-   ```
+| Setting | Value |
+|---------|-------|
+| **Name** | `internflow-api` (or your preference) |
+| **Region** | Choose the closest (e.g., Oregon) |
+| **Branch** | `main` |
+| **Runtime** | `Python 3` |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| **Root Directory** | `backend` |
+| **Plan** | **Free** |
 
 ### Step 3: Add Environment Variables
 
-In Railway dashboard:
-1. Click on your deployed service
-2. Go to **"Variables"** tab
-3. Click **"New Variable"** and add each of these:
+In Render dashboard (after creating the service):
+1. Go to your Web Service dashboard
+2. Click **"Environment"** tab
+3. Click **"Add Environment Variable"** and add each:
 
 ```env
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 SERPAPI_KEY=your_serpapi_key
-GROQ_API_KEY=your_groq_api_key
-# OR if using Gemini:
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
 **Where to find these:**
 - **Supabase Keys:** [Supabase Dashboard](https://supabase.com/dashboard) → Your Project → Settings → API
 - **SerpAPI Key:** [SerpAPI Dashboard](https://serpapi.com/manage-api-key)
-- **Groq API Key:** [Groq Console](https://console.groq.com/keys)
+- **Gemini API Key:** [Google AI Studio](https://aistudio.google.com/apikey)
 - **Gemini API Key:** [Google AI Studio](https://makersuite.google.com/app/apikey)
 
-### Step 4: Get Your Deployment URL
+### Step 4: Deploy
 
-1. Once deployment completes (2-5 minutes)
-2. Go to **"Settings"** tab
-3. Find **"Domains"** section
-4. Copy the generated domain: `https://your-app.up.railway.app`
-5. Or click **"Generate Domain"** if not automatically created
+1. Click **"Create Web Service"**
+2. Render will automatically:
+   - Detect Python runtime
+   - Install dependencies from `requirements.txt`
+   - Run the start command
+3. Initial deploy takes 2-5 minutes
+
+### Step 5: Get Your Deployment URL
+
+1. Once deployment completes, Render provides a URL like:
+   `https://internflow-api.onrender.com`
+2. You can also set a custom domain under **Settings** → **Custom Domain**
 
 **⚠️ Important:** Keep this URL - you'll need it for frontend deployment!
 
@@ -164,11 +166,11 @@ Add these environment variables:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_BACKEND_URL=https://your-app.up.railway.app
+NEXT_PUBLIC_BACKEND_URL=https://your-app.onrender.com
 ```
 
 **⚠️ Important:** 
-- Replace `https://your-app.up.railway.app` with YOUR actual Railway backend URL
+- Replace `https://your-app.onrender.com` with YOUR actual Render backend URL
 - DO NOT add trailing slashes
 
 ### Step 4: Deploy
@@ -258,7 +260,7 @@ Update in Supabase:
 - Add `https://internflow.com/dashboard` to redirect URLs
 
 Update frontend env variables in Vercel:
-- Keep `NEXT_PUBLIC_BACKEND_URL` pointing to Railway URL
+- Keep `NEXT_PUBLIC_BACKEND_URL` pointing to Render URL
 
 ---
 
@@ -272,8 +274,8 @@ Both Vercel and Render automatically provide SSL certificates. Ensure:
 
 ### Set Up Monitoring
 
-**Railway:**
-1. Check **Deployments** tab for build logs
+**Render:**
+1. Check **Events** tab for deployment logs
 2. Monitor **Metrics** tab for CPU/Memory usage
 3. Set up **Webhooks** for deploy notifications (Settings → Webhooks)
 
@@ -290,7 +292,7 @@ Both Vercel and Render automatically provide SSL certificates. Ensure:
 They should be in `.gitignore` already.
 
 **To update environment variables:**
-- **Railway:** Dashboard → Variables tab → Add/Edit → Save (auto-redeploys)
+- **Render:** Dashboard → Environment → Add/Edit → Save (auto-deploys)
 - **Vercel:** Dashboard → Settings → Environment Variables → Add → Redeploy
 
 ---
@@ -300,10 +302,10 @@ They should be in `.gitignore` already.
 ### Backend Issues
 
 **Problem:** Backend not starting
-- **Check:** Railway logs (Deployments tab → View Logs)
+- **Check:** Render logs (Events tab → View Logs)
 - **Fix:** Verify all environment variables are set
 - **Fix:** Ensure `requirements.txt` has all dependencies
-- **Fix:** Check if Railway detected the correct start command
+- **Fix:** Check if the Build Command and Start Command are correct
 
 **Problem:** CORS errors
 - **Check:** Browser console for CORS errors
@@ -311,7 +313,7 @@ They should be in `.gitignore` already.
 - **Fix:** Check `main.py` has correct CORS origins
 
 **Problem:** 500 Internal Server Error
-- **Check:** Railway logs for detailed error messages
+- **Check:** Render logs for detailed error messages
 - **Fix:** Missing environment variables
 - **Fix:** Check Supabase connection
 
@@ -344,13 +346,13 @@ They should be in `.gitignore` already.
 
 **Daily:**
 - Visit your app to ensure it's running
-- Check Railway dashboard for uptime and metrics
+- Check Render dashboard for uptime and metrics
 
 **Weekly:**
 - Review Vercel analytics
-- Check Railway usage and metrics
+- Check Render usage and metrics
 - Check Supabase database usage
-- Monitor API usage (SerpAPI, Groq/Gemini)
+- Monitor API usage (SerpAPI, Gemini)
 
 ### Keep Dependencies Updated
 
@@ -379,13 +381,13 @@ Supabase provides automatic backups on paid plans. For free tier:
 | Service | Free Tier Limits | Upgrade Cost |
 |---------|------------------|--------------|
 | **Vercel** | 100GB bandwidth/month | $20/month |
-| **Railway** | $5 free credit/month (500 hours) | $5-20/month (usage-based) |
+| **Render** | 750 hours/month (1 app 24/7) | $7-20/month (paid plans) |
 | **Supabase** | 500MB database, 1GB storage | $25/month |
 | **SerpAPI** | 100 searches/month | $50/month (5k searches) |
-| **Groq** | Free tier available | Variable |
+| **Gemini** | Free tier available | Variable |
 | **Gemini** | Free tier available | Variable |
 
-**Total Monthly Cost (Free Tier):** $0 (with $5 Railway credit)
+**Total Monthly Cost (Free Tier):** $0 (Render Free Tier)
 **If you upgrade everything:** ~$100/month
 
 ---
@@ -394,7 +396,7 @@ Supabase provides automatic backups on paid plans. For free tier:
 
 Your application is now live at:
 - **Frontend:** `https://your-app.vercel.app`
-- **Backend:** `https://your-app.up.railway.app`
+- **Backend:** `https://your-app.onrender.com`
 
 ### Share Your Project
 
@@ -414,7 +416,7 @@ Your application is now live at:
 ## 📞 Need Help?
 
 - **Vercel Docs:** https://vercel.com/docs
-- **Railway Docs:** https://docs.railway.app
+- **Render Docs:** https://docs.render.com
 - **Supabase Docs:** https://supabase.com/docs
 - **FastAPI Docs:** https://fastapi.tiangolo.com
 - **Next.js Docs:** https://nextjs.org/docs

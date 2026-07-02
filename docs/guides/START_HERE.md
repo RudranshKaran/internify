@@ -59,7 +59,7 @@ Test areas:
 **Guide**: `REFACTORING_COMPLETE.md` (Deployment Steps section)
 
 Deploy order:
-1. Backend → Render/Railway
+1. Backend → Render
 2. Frontend → Vercel
 3. Database → Supabase (migration)
 

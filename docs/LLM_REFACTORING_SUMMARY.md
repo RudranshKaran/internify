@@ -363,7 +363,7 @@ await llm_service.generate_email(
 
 ### Prerequisites
 - ✅ No new dependencies
-- ✅ Existing `GROQ_API_KEY` or `GEMINI_API_KEY` works
+- ✅ Existing `GEMINI_API_KEY` works
 - ✅ No database changes
 - ✅ No frontend changes
 

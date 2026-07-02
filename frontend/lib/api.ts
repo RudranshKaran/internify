@@ -1,6 +1,36 @@
 import axios from 'axios'
 import { supabase } from './supabaseClient'
 
+// Helper to safely stringify response data for error logging
+function safeStringify(data: unknown): string {
+  if (data === null || data === undefined) return '<empty>'
+  if (typeof data === 'string') {
+    // Truncate HTML responses to first 500 chars so we can identify them
+    if (data.trim().startsWith('<')) return data.substring(0, 500) + '... [HTML response truncated]'
+    return data.substring(0, 1000)
+  }
+  try {
+    return JSON.stringify(data)
+  } catch {
+    return String(data)
+  }
+}
+
+function formatApiError(error: any): string {
+  const summary = {
+    message: error?.message ?? 'Unknown API error',
+    status: error?.response?.status ?? null,
+    statusText: error?.response?.statusText ?? null,
+    contentType: error?.response?.headers?.['content-type'] ?? null,
+    detail: error?.response?.data?.detail ?? null,
+    rawBody: safeStringify(error?.response?.data),
+    url: error?.config?.url ?? null,
+    method: error?.config?.method?.toUpperCase?.() ?? null,
+  }
+
+  return JSON.stringify(summary, null, 2)
+}
+
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
 
 // Create axios instance
@@ -41,8 +71,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Log the error for debugging
-    console.error('API Error:', error.response?.status, error.response?.data, error.config?.url)
+    // Log the error for debugging — capture all fields to diagnose empty/non-JSON 500s
+    const isExpectedNoResume404 = 
+      error.response?.status === 404 && 
+      error.config?.url?.includes('/resume/latest')
+    
+    if (isExpectedNoResume404) {
+      console.info('API: No resume found (expected for new users)', { status: 404, url: error.config?.url })
+    } else {
+      console.error(`API Error: ${formatApiError(error)}`)
+    }
     
     // Only redirect to login on 401 if we're not already on the login page
     // AND only if it's not a "no resume found" type error
@@ -90,6 +128,8 @@ export const internshipsAPI = {
   getById: (internshipId: string) => api.get(`/internships/${internshipId}`),
   searchByCompany: (companyName: string, role?: string) =>
     api.get(`/internships/company/${companyName}`, { params: { role } }),
+  listDiscovered: (params?: { email_status?: string; limit?: number; cursor?: string }) =>
+    api.get('/internships', { params }),
 }
 
 export const llmAPI = {

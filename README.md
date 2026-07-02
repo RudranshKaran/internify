@@ -16,7 +16,7 @@ InternFlow is a modern, full-stack web platform that automates the entire intern
 - 🔐 **Secure Authentication** - Supabase Auth with JWT validation
 - 📄 **Resume Upload & Parsing** - Extract key information from PDF resumes
 - 🔍 **Real-Time Internship Search** - Fetch latest internship postings from LinkedIn via SerpAPI
-- 🤖 **AI Email Generation** - Personalized cold emails using Groq/Gemini LLM
+- 🤖 **AI Email Generation** - Personalized cold emails using Gemini LLM
 - 📋 **Easy Copy & Use** - Copy generated emails to use in your email client
 - 📊 **Application History** - Track all generated email applications
 - 🎨 **Beautiful UI** - Modern design with Tailwind CSS and shadcn/ui
@@ -41,7 +41,7 @@ InternFlow is a modern, full-stack web platform that automates the entire intern
 - **Database:** PostgreSQL (Supabase)
 - **Authentication:** Supabase Auth
 - **File Storage:** Supabase Storage
-- **AI/LLM:** Groq API (LLaMA-3) / Gemini API
+- **AI/LLM:** Gemini API
 - **Job Scraping:** SerpAPI
 
 ---
@@ -109,7 +109,7 @@ internflow/
 - Supabase account
 - API Keys:
   - SerpAPI key
-  - Groq API key or Gemini API key
+  - Gemini API key
 
 ---
 
@@ -137,8 +137,6 @@ internflow/
    SUPABASE_ANON_KEY=your_supabase_anon_key
    SUPABASE_SERVICE_KEY=your_supabase_service_key
    SERPAPI_KEY=your_serpapi_key
-   GROQ_API_KEY=your_groq_api_key
-   # OR
    GEMINI_API_KEY=your_gemini_api_key
    ```
 
@@ -266,7 +264,7 @@ CREATE TABLE resumes (
 3. Add environment variables
 4. Deploy
 
-### Backend (Render / Railway)
+### Backend (Render)
 
 1. Create new web service
 2. Connect GitHub repository
@@ -289,7 +287,7 @@ SUPABASE_URL=
 SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_KEY=
 SERPAPI_KEY=
-GROQ_API_KEY=
+GEMINI_API_KEY=
 ```
 
 ### Frontend `.env.local`
@@ -353,7 +351,7 @@ Built with ❤️ for automating internship applications
 ## Acknowledgments
 
 - Supabase for authentication and database
-- Groq for AI email generation
+- Gemini for AI email generation
 - SerpAPI for job scraping
 - Vercel for frontend hosting
 

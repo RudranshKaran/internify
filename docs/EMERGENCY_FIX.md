@@ -189,7 +189,7 @@ No more:
 **Solution:**
 1. Make sure backend restarted after code changes
 2. Check if GEMINI_API_KEY is valid in .env
-3. Try using GROQ instead (set GROQ_API_KEY in .env)
+3. Check Google AI Studio for quota/usage status
 
 ### Issue: Still getting table not found errors
 **Solution:**
@@ -207,27 +207,9 @@ Make sure you're using SUPABASE_SERVICE_KEY not SUPABASE_ANON_KEY in your .env f
 1. Is resume uploaded?
 2. Is internship selected?
 3. Check backend logs for specific error
-4. Verify GEMINI_API_KEY or GROQ_API_KEY in .env
+4. Verify GEMINI_API_KEY in .env
 
 ---
-
-## Alternative: Use GROQ Instead of Gemini
-
-If Gemini continues to cause issues, switch to GROQ:
-
-1. Get GROQ API key from https://console.groq.com
-2. Add to .env:
-   ```
-   GROQ_API_KEY=gsk_your_key_here
-   ```
-3. Install GROQ library:
-   ```powershell
-   cd backend
-   pip install groq
-   ```
-4. Restart backend
-
-The code will automatically prefer GROQ over Gemini if both keys exist.
 
 ---
 

@@ -1,6 +1,8 @@
 import os
 import requests
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Set
+import re
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -175,6 +177,149 @@ class ScraperService:
                     break
         
         return contact_info
+
+    # ── Query variant generation ──────────────────────────────────────
+
+    ROLE_SYNONYMS: Dict[str, List[str]] = {
+        "engineer": ["developer", "software engineer", "swe", "programmer", "software developer"],
+        "developer": ["engineer", "software engineer", "programmer", "software developer", "swe"],
+        "intern": ["internship", "trainee", "apprentice", "graduate trainee"],
+        "analyst": ["analytics", "business analyst", "data analyst", "insights"],
+        "data scientist": ["ml engineer", "ai engineer", "machine learning engineer", "data analyst"],
+        "designer": ["design", "ux designer", "product designer", "ui designer"],
+        "product manager": ["pm", "product", "program manager", "technical product manager"],
+        "marketing": ["growth", "digital marketing", "brand marketing", "content marketing"],
+        "finance": ["financial analyst", "accounting", "investment banking", "corporate finance"],
+        "consulting": ["strategy", "management consultant", "business consultant", "advisory"],
+    }
+
+    # Terms that get swapped for diversity rather than kept as-is
+    _VARIANT_TEMPLATES = [
+        "{role} intern",
+        "{role} internship",
+        "{role}",
+        "intern {role_base}",
+        "{alt_role} intern",
+    ]
+
+    @staticmethod
+    def _tokenize(phrase: str) -> List[str]:
+        """Split a phrase into lowercase tokens."""
+        return phrase.lower().split()
+
+    def _generate_query_variants(self, role: str) -> List[str]:
+        """
+        Generate 3–5 search query variants from a base role string.
+        Uses synonym expansion so, for example, 'Software Engineer Intern'
+        produces queries like 'Software Developer Intern', 'SWE Internship', etc.
+        """
+        role_lower = role.lower().strip()
+        tokens = self._tokenize(role_lower)
+
+        # Pick the first token that matches a synonym key
+        base_key = None
+        for token in tokens:
+            if token in self.ROLE_SYNONYMS:
+                base_key = token
+                break
+
+        variants: List[str] = []
+        seen: Set[str] = set()
+
+        # 1. Original query
+        original = f"{role_lower} internship"
+        variants.append(original)
+        seen.add(original)
+
+        # 2. Drop "intern" / "internship" suffix if present
+        core_tokens = [t for t in tokens if t not in ("intern", "internship", "trainee", "apprentice")]
+        core_role = " ".join(core_tokens) if core_tokens else role_lower
+
+        # 3. Gerund variant: "Software Engineer" → "Software Engineering"
+        gerund_role = re.sub(r'\bengineer\b', 'engineering', core_role)
+        gerund_role = re.sub(r'\bdevelop\b', 'developing', gerund_role)
+        gerund_query = f"{gerund_role} intern"
+        if gerund_query not in seen:
+            variants.append(gerund_query)
+            seen.add(gerund_query)
+
+        # 4. Synonym variant if we found a key
+        if base_key and base_key in self.ROLE_SYNONYMS:
+            for synonym in self.ROLE_SYNONYMS[base_key]:
+                synonym_role = core_role.replace(base_key, synonym, 1)
+                syn_query = f"{synonym_role} intern"
+                if syn_query not in seen:
+                    variants.append(syn_query)
+                    seen.add(syn_query)
+                    if len(variants) >= 5:
+                        break
+
+        # 5. Gerund + synonym combo
+        if base_key and base_key in self.ROLE_SYNONYMS and len(variants) < 5:
+            for synonym in self.ROLE_SYNONYMS[base_key]:
+                syn_gerund = synonym.replace("engineer", "engineering").replace("developer", "developing")
+                if syn_gerund == synonym:
+                    continue
+                syn_gerund_role = core_role.replace(base_key, syn_gerund, 1)
+                sg_query = f"{syn_gerund_role} intern"
+                if sg_query not in seen:
+                    variants.append(sg_query)
+                    seen.add(sg_query)
+                    if len(variants) >= 5:
+                        break
+
+        # Ensure we have at least 3, pad with the original if needed
+        while len(variants) < 3:
+            pad = original if original not in seen else f"{role_lower} job"
+            if pad not in seen:
+                variants.append(pad)
+                seen.add(pad)
+
+        return variants[:5]
+
+    # ── Multi-variant search ──────────────────────────────────────────
+
+    async def search_all_variants(
+        self,
+        role: str,
+        location: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate query variants from *role*, fire one SerpAPI call per variant
+        with ``num=100``, and return a deduplicated list (by company domain).
+
+        Each search call costs the same as a 10-result call, so this is the
+        most efficient way to maximise coverage per credit spent.
+        """
+        variants = self._generate_query_variants(role)
+        print(f"[SCRAPER] Generated {len(variants)} variants: {variants}")
+
+        seen_domains: Set[str] = set()
+        combined: List[Dict[str, Any]] = []
+
+        for i, variant in enumerate(variants):
+            print(f"[SCRAPER] Variant {i+1}/{len(variants)}: '{variant}'")
+            try:
+                results = await self.search_internships(query=variant, location=location, limit=100)
+            except Exception as e:
+                print(f"[SCRAPER] Variant '{variant}' failed, skipping: {e}")
+                continue
+
+            for job in results:
+                link = job.get("link") or ""
+                domain = urlparse(link).netloc if link else None
+
+                # Some results don't have a link — deduplicate by company name instead
+                dedup_key = domain or job.get("company", "").lower().strip()
+
+                if dedup_key and dedup_key not in seen_domains:
+                    seen_domains.add(dedup_key)
+                    # Tag which variant surfaced this company
+                    job["_surfaced_by"] = variant
+                    combined.append(job)
+
+        print(f"[SCRAPER] Combined {len(combined)} unique companies across {len(variants)} variants")
+        return combined
     
     async def get_internship_details(self, internship_id: str) -> Optional[Dict[str, Any]]:
         """

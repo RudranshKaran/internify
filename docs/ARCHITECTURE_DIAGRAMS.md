@@ -103,7 +103,7 @@
 │  │     - "MUST follow project-first structure"         │    │
 │  │     - "NO generic phrases"                          │    │
 │  │   ↓                                                 │    │
-│  │ Send to LLM (Groq or Gemini)                        │    │
+│  │ Send to LLM (Gemini)                                │    │
 │  │   ↓                                                 │    │
 │  │ Receive generated email                             │    │
 │  └─────────────────────────────────────────────────────┘    │

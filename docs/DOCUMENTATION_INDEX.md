@@ -336,8 +336,7 @@ mv llm_service_OLD_BACKUP.py llm_service.py
 ## 🔗 External References
 
 ### Tools Used
-- **Groq API** - LLM service (optional)
-- **Gemini API** - LLM service (optional)
+- **Gemini API** - LLM service
 - Python async/await
 - Regex for pattern matching
 

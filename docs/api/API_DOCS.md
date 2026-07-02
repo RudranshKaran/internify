@@ -235,7 +235,7 @@ All endpoints return errors in this format:
 
 - **SerpAPI:** 100 searches/month (free tier)
 - **Resend:** 100 emails/day (free tier)
-- **Groq:** Generous free tier, check their docs
+- **Gemini:** Generous free tier, check their docs
 
 ---
 

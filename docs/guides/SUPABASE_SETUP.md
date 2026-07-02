@@ -1,263 +1,181 @@
-# 🔧 Supabase Setup Instructions
+# Supabase Setup
 
-## Problem
-When uploading a resume, you get these errors:
-1. `Bucket not found` - The storage bucket for resumes doesn't exist
-2. `Could not find the table 'public.resumes'` - The database tables haven't been created
+This guide covers the Supabase setup used by InternFlow end to end: authentication, database tables, storage, row-level security, and the environment variables required by the backend and frontend.
 
-## Solution
+Use this guide if you are starting a new Supabase project, fixing missing-table or missing-bucket errors, or rebuilding the database from scratch.
 
-You need to set up your Supabase database and storage. Follow these steps:
+## What InternFlow Uses Supabase For
 
----
+- Authentication through Supabase Auth JWTs.
+- Database storage for `users`, `internships`, `emails`, and `resumes`.
+- Private storage for uploaded resume PDFs.
 
-## Step 1: Create Database Tables
+The backend verifies Supabase JWTs in [backend/routes/auth.py](../../backend/routes/auth.py) and uses the service key through [backend/services/supabase_service.py](../../backend/services/supabase_service.py). The frontend uses the browser session client in [frontend/lib/supabaseClient.ts](../../frontend/lib/supabaseClient.ts).
 
-1. Go to your Supabase dashboard: https://app.supabase.com
-2. Select your project: `nrcoscehjfbxwafjhxvq`
-3. Click on **SQL Editor** in the left sidebar
-4. Click **New Query**
-5. Copy and paste the ENTIRE contents of `database_schema.sql` from this project
-6. Click **Run** button (or press Ctrl+Enter)
+## Prerequisites
 
-You should see: `Success. No rows returned`
+- A Supabase account and project.
+- Access to the Supabase dashboard SQL Editor and Storage section.
+- The repo checked out locally.
 
-### What this creates:
-- ✅ `users` table - stores user information
-- ✅ `resumes` table - stores resume metadata
-- ✅ `jobs` table - stores job postings
-- ✅ `emails` table - stores email history
-- ✅ Row Level Security (RLS) policies for data protection
+## Recommended Setup Path
 
----
+1. Create or open your Supabase project.
+2. Run [docs/database/supabase_complete_setup.sql](../database/supabase_complete_setup.sql).
+3. Add the environment variables listed below.
+4. Restart the backend and frontend.
+5. Test login and resume upload.
 
-## Step 2: Create Storage Bucket
+## 1) Create or Select a Supabase Project
 
-1. Still in Supabase dashboard
-2. Click on **Storage** in the left sidebar
-3. Click **New Bucket** button
-4. Configure the bucket:
-   ```
-   Name: resumes
-   Public: No (keep it private)
-   File size limit: 10 MB
-   Allowed MIME types: application/pdf
-   ```
-5. Click **Create bucket**
+1. Go to https://supabase.com/dashboard.
+2. Create a new project or open an existing one.
+3. Copy the Project URL and the keys from the project settings.
 
-### Set up Storage Policies
+You will need:
 
-After creating the bucket, you need to set up policies:
+- `SUPABASE_URL` for the backend.
+- `SUPABASE_SERVICE_KEY` for the backend.
+- `NEXT_PUBLIC_SUPABASE_URL` for the frontend.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` for the frontend.
 
-1. Click on the `resumes` bucket you just created
-2. Go to **Policies** tab
-3. Click **New Policy** button
-4. You'll see options for templates - click **"For full customization"** at the bottom
+## 2) Run the Database Setup Script
 
-#### Policy 1: Users can upload their own resumes
+Open the Supabase SQL Editor and run the full contents of [docs/database/supabase_complete_setup.sql](../database/supabase_complete_setup.sql).
 
-Click **New Policy** and fill in:
+This script creates:
 
-**Policy name:**
-```
-Users can upload own resumes
-```
+- `users`
+- `internships`
+- `emails`
+- `resumes`
+- indexes for common lookups
+- row-level security policies
+- the private `resumes` storage bucket
+- storage policies for authenticated users
 
-**Allowed operation:** Check **INSERT** only
+### Important schema note
 
-**Target roles:** Select `authenticated` from dropdown (or leave as "Defaults to all (public) roles")
+Some older docs in the repo mention a `jobs` table. The current schema uses `internships` instead, matching the backend code and documentation refresh.
 
-**Policy definition:** Paste this in the SQL editor:
+## 3) Confirm Storage Setup
+
+The setup script inserts a private storage bucket named `resumes` with a 10 MB size limit and PDF-only MIME type.
+
+If you prefer to create it manually in the dashboard, use:
+
+- Bucket name: `resumes`
+- Public: `false`
+- File size limit: `10485760`
+- Allowed MIME types: `application/pdf`
+
+### Storage policy behavior
+
+Resume uploads are expected to live under a user-owned folder path. The policies allow access when the first folder segment matches the authenticated user ID:
+
 ```sql
-(
-  bucket_id = 'resumes'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-)
+(storage.foldername(name))[1] = auth.uid()::text
 ```
 
-**Explanation:** This checks that:
-- The file is being uploaded to the 'resumes' bucket
-- The first folder in the path matches the user's ID (auth.uid())
+That is why the app can safely keep the bucket private while still letting users manage their own files.
 
-Click **Review** then **Save policy**
+## 4) Add Environment Variables
 
-#### Policy 2: Users can read their own resumes
+### Backend `.env`
 
-Click **New Policy** again and fill in:
+Set these in `backend/.env`:
 
-**Policy name:**
-```
-Users can read own resumes
-```
-
-**Allowed operation:** Check **SELECT** only
-
-**Target roles:** Select `authenticated` from dropdown
-
-**Policy definition:** Paste this in the SQL editor:
-```sql
-(
-  bucket_id = 'resumes'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-)
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-role-key
 ```
 
-Click **Review** then **Save policy**
+The backend uses `SUPABASE_SERVICE_KEY` first and falls back to `SUPABASE_ANON_KEY` only if needed, but for production the service role key should be present.
 
-#### Policy 3: Users can update their own resumes
+### Frontend `.env.local`
 
-Click **New Policy** again and fill in:
+Set these in `frontend/.env.local`:
 
-**Policy name:**
-```
-Users can update own resumes
-```
-
-**Allowed operation:** Check **UPDATE** only
-
-**Target roles:** Select `authenticated` from dropdown
-
-**Policy definition:** Paste this in the SQL editor:
-```sql
-(
-  bucket_id = 'resumes'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-)
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```
 
-Click **Review** then **Save policy**
+Only the anon key should be exposed to the browser.
 
-#### Policy 4: Users can delete their own resumes
+## 5) Restart the App
 
-Click **New Policy** again and fill in:
+After updating the SQL schema and environment variables:
 
-**Policy name:**
-```
-Users can delete own resumes
-```
+1. Restart the backend.
+2. Restart the frontend.
+3. Sign in again so the client gets a fresh session.
 
-**Allowed operation:** Check **DELETE** only
+## 6) Verify the Setup
 
-**Target roles:** Select `authenticated` from dropdown
+In Supabase, confirm the following exist:
 
-**Policy definition:** Paste this in the SQL editor:
-```sql
-(
-  bucket_id = 'resumes'
-  AND (storage.foldername(name))[1] = auth.uid()::text
-)
-```
+- Tables: `users`, `internships`, `emails`, `resumes`
+- Storage bucket: `resumes`
+- RLS policies: enabled for the tables and storage objects
 
-Click **Review** then **Save policy**
+From the application side, verify:
 
----
+- Login succeeds.
+- `/auth/verify` returns the signed-in user.
+- Resume upload creates a file in the `resumes` bucket.
+- Resume metadata is saved to the `resumes` table.
 
-**Note:** After creating all 4 policies, you should see them listed in the Policies tab of your `resumes` bucket. Make sure all 4 are enabled (toggle switch is ON).
+## How the App Uses These Records
 
----
+- `users` stores the authenticated user profile row.
+- `internships` stores internship postings used by the app.
+- `emails` stores generated or sent email history.
+- `resumes` stores resume metadata and extracted text.
 
-## Step 3: Verify Setup
-
-### Check Tables
-1. Go to **Table Editor** in Supabase
-2. You should see: `users`, `resumes`, `jobs`, `emails` tables
-
-### Check Storage
-1. Go to **Storage**
-2. You should see: `resumes` bucket
-
----
-
-## Step 4: Test Resume Upload
-
-1. Go back to your application
-2. Log in
-3. Try uploading a resume
-4. It should work now!
-
----
-
-## Quick Setup via SQL (Alternative)
-
-If you prefer, you can do everything via SQL:
-
-### 1. Create Tables
-Go to SQL Editor and run:
-```sql
--- Copy the entire contents of database_schema.sql file
-```
-
-### 2. Create Storage Bucket and Policies
-Go to SQL Editor and run:
-```sql
--- Create storage bucket (this creates the bucket structure)
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'resumes',
-  'resumes',
-  false,
-  10485760, -- 10 MB in bytes
-  ARRAY['application/pdf']
-);
-
--- Add storage policies
-CREATE POLICY "Users can upload own resumes"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'resumes' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
-);
-
-CREATE POLICY "Users can read own resumes"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (
-  bucket_id = 'resumes' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
-);
-
-CREATE POLICY "Users can update own resumes"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (
-  bucket_id = 'resumes' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
-);
-
-CREATE POLICY "Users can delete own resumes"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'resumes' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
-);
-```
-
----
+The backend service methods in [backend/services/supabase_service.py](../../backend/services/supabase_service.py) read and write these tables directly.
 
 ## Troubleshooting
 
-### If you still get "Bucket not found":
-- Make sure the bucket name is exactly `resumes` (lowercase, no spaces)
-- Check that the bucket was created successfully in Storage tab
+### `Bucket not found`
 
-### If you still get "Table not found":
-- Make sure you ran the entire `database_schema.sql` script
-- Check in Table Editor that tables were created
-- Make sure you're in the correct Supabase project
+- Confirm the bucket name is exactly `resumes`.
+- Confirm the SQL script finished successfully.
+- Check Storage in the Supabase dashboard.
 
-### If you get "Permission denied":
-- Check that RLS policies were created correctly
-- Make sure you're logged in with a valid user
-- Check that the JWT token is being sent correctly
+### `Could not find the table 'public.resumes'`
 
-### If upload still fails:
-- Check backend terminal for detailed error messages
-- Check browser console for error details
-- Make sure the PDF file is valid and under 10MB
+- Re-run [docs/database/supabase_complete_setup.sql](../database/supabase_complete_setup.sql).
+- Check the Table Editor for `resumes`.
+- Make sure you are in the correct Supabase project.
 
----
+### Authentication works in the browser but fails on the backend
+
+- Confirm `SUPABASE_URL` is set.
+- Confirm `SUPABASE_SERVICE_KEY` is set in the backend environment.
+- Make sure the frontend and backend are pointing at the same Supabase project.
+
+### Resume upload returns a permission error
+
+- Confirm the storage policies were created.
+- Confirm the file path includes the user ID folder expected by the policy.
+- Confirm the logged-in user has a valid JWT session.
+
+### `users` row is missing after login
+
+- The backend creates the `users` row in `/auth/verify` after validating the JWT.
+- If that route has not been called, sign in again and hit the app flow that triggers auth verification.
+
+## Related Files
+
+- [docs/database/supabase_complete_setup.sql](../database/supabase_complete_setup.sql)
+- [backend/services/supabase_service.py](../../backend/services/supabase_service.py)
+- [backend/routes/auth.py](../../backend/routes/auth.py)
+- [frontend/lib/supabaseClient.ts](../../frontend/lib/supabaseClient.ts)
+- [docs/guides/SETUP.md](SETUP.md)
+- [docs/README.md](../README.md)
 
 ## After Setup
 

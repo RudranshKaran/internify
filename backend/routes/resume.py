@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from routes.utils import verify_token, extract_user_id
 from services.supabase_service import supabase_service
+from services.llm_service import llm_service
 from models.resume import ResumeUploadResponse
 import PyPDF2
 import io
 from datetime import datetime
+import asyncio
 
 router = APIRouter(prefix="/resume", tags=["Resume"])
 
@@ -129,9 +131,25 @@ async def upload_resume(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to save resume metadata to database. Please check if your user account exists in the database and try again. Check server logs for details."
             )
-        
+
+        # Fire-and-forget: extract structured data via Gemini in the background
+        resume_id = resume["id"]
+
+        async def _extract_and_store():
+            try:
+                structured = await llm_service.extract_structured_resume(extracted_text)
+                if structured:
+                    await supabase_service.update_resume_extracted_data(resume_id, structured)
+                    print(f"[RESUME] Structured extraction saved for resume {resume_id}")
+                else:
+                    print(f"[RESUME] Structured extraction returned None for resume {resume_id}")
+            except Exception as e:
+                print(f"[RESUME] Background extraction failed for resume {resume_id}: {e}")
+
+        asyncio.create_task(_extract_and_store())
+
         return ResumeUploadResponse(
-            id=resume["id"],
+            id=resume_id,
             file_path=file_path,
             extracted_text=extracted_text,
             uploaded_at=resume["uploaded_at"]

@@ -1,8 +1,19 @@
-from fastapi import FastAPI
+import logging
+import sys
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 import os
 from dotenv import load_dotenv
+
+# Configure logging to stdout so platform logs capture everything
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout,
+)
+logger = logging.getLogger("internflow")
 
 # Import routers
 from routes import (
@@ -10,7 +21,8 @@ from routes import (
     resume_router,
     internships_router,
     llm_router,
-    email_router
+    email_router,
+    companies_router,
 )
 
 # Load environment variables
@@ -54,6 +66,7 @@ app.include_router(resume_router)
 app.include_router(internships_router)
 app.include_router(llm_router)
 app.include_router(email_router)
+app.include_router(companies_router)
 
 
 # Root endpoint
@@ -79,17 +92,25 @@ async def health_check():
     }
 
 
-# Error handler
+# Error handlers
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    """HTTPException handler — preserves status code and detail JSON body"""
+    logger.warning(f"HTTP {exc.status_code} on {request.method} {request.url.path}: {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    """Global exception handler"""
+    """Catch-all for unhandled exceptions"""
+    logger.exception(f"Unhandled exception on {request.method} {request.url.path}")
+    detail = str(exc) if os.getenv("ENVIRONMENT") == "development" else "An unexpected error occurred"
     return JSONResponse(
         status_code=500,
-        content={
-            "success": False,
-            "error": "Internal server error",
-            "detail": str(exc) if os.getenv("ENVIRONMENT") == "development" else "An error occurred"
-        }
+        content={"detail": detail},
     )
 
 

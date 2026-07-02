@@ -8,7 +8,7 @@
 - [ ] API keys obtained:
   - [ ] Resend API key
   - [ ] SerpAPI key  
-  - [ ] Groq API key (or Gemini)
+  - [ ] Gemini API key
 
 ---
 
@@ -86,8 +86,8 @@ CREATE TABLE resumes (
 3. Get API key from dashboard
 4. Free tier: 100 searches/month
 
-### Groq API Key (Recommended)
-1. Visit [groq.com](https://console.groq.com)
+### Gemini API Key
+1. Visit [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 2. Sign up and get API key
 3. Fast and free!
 
@@ -126,7 +126,7 @@ SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_KEY=your-service-key
 RESEND_API_KEY=re_your-key
 SERPAPI_KEY=your-serpapi-key
-GROQ_API_KEY=gsk_your-key
+GEMINI_API_KEY=your-gemini-key
 ```
 
 Start backend:
@@ -246,7 +246,7 @@ NEXT_PUBLIC_BACKEND_URL=https://your-app.onrender.com
 - **Supabase:** 500MB database, 1GB bandwidth/month
 - **Resend:** 100 emails/day, 3,000/month
 - **SerpAPI:** 100 searches/month
-- **Groq:** Very generous free tier
+- **Gemini:** Very generous free tier
 - **Render:** 750 hours/month (enough for 1 app)
 - **Vercel:** Unlimited personal projects
 
@@ -257,3 +257,4 @@ NEXT_PUBLIC_BACKEND_URL=https://your-app.onrender.com
 Check the main README.md for full documentation.
 
 Happy job hunting! 🎯
+unting! 🎯

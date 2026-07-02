@@ -122,11 +122,11 @@ This should now succeed! ✅
 
 ## API Keys You'll Also Need (Backend)
 
-### Groq API (Recommended - Free AI)
-🔗 https://console.groq.com
+### Gemini API (Free AI)
+🔗 https://aistudio.google.com/apikey
 - Sign up
 - Create API key
-- Add to `backend/.env` as `GROQ_API_KEY`
+- Add to `backend/.env` as `GEMINI_API_KEY`
 
 ### Resend API (Email Sending)
 🔗 https://resend.com/api-keys  

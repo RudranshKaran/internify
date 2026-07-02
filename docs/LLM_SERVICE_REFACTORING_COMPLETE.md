@@ -450,8 +450,8 @@ log_comparison(email_a, email_b, user_feedback)
 ## 🔧 Configuration
 
 No environment variables changed. Uses existing:
-- `GROQ_API_KEY` (optional)
-- `GEMINI_API_KEY` (optional)
+- `GEMINI_API_KEY`
+
 
 ---
 

@@ -88,7 +88,7 @@
 - **Frontend Pages:** 5
 - **Reusable Components:** 6
 - **Database Tables:** 4
-- **API Integrations:** 4 (Supabase, Resend, SerpAPI, Groq/Gemini)
+- **API Integrations:** 4 (Supabase, Resend, SerpAPI, Gemini)
 
 ---
 
@@ -116,7 +116,7 @@ npm install
 - Supabase: https://supabase.com (free)
 - Resend: https://resend.com (100 emails/day free)
 - SerpAPI: https://serpapi.com (100 searches/month free)
-- Groq: https://console.groq.com (generous free tier)
+- Gemini: https://aistudio.google.com/ (generous free tier)
 
 **Backend `.env`:**
 ```env
@@ -125,7 +125,7 @@ SUPABASE_ANON_KEY=your_key
 SUPABASE_SERVICE_KEY=your_service_key
 RESEND_API_KEY=your_resend_key
 SERPAPI_KEY=your_serpapi_key
-GROQ_API_KEY=your_groq_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 **Frontend `.env.local`:**
@@ -184,7 +184,7 @@ npm run dev
 
 ## 🌐 Deployment
 
-### Backend → Render/Railway
+### Backend → Render
 1. Push to GitHub
 2. Connect repository
 3. Set environment variables
@@ -206,7 +206,7 @@ Detailed instructions in `SETUP.md`
 - User authentication (Supabase)
 - Resume upload & PDF parsing
 - Real-time job search (SerpAPI)
-- AI email generation (Groq/Gemini)
+- AI email generation (Gemini)
 - Automated email sending (Resend)
 - Email history tracking
 - Responsive, modern UI

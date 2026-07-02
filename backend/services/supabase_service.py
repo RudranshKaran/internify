@@ -2,6 +2,7 @@ import os
 from supabase import create_client, Client
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -186,6 +187,18 @@ class SupabaseService:
         except Exception as e:
             print(f"Error deleting resume: {e}")
             return False
+
+    async def update_resume_extracted_data(self, resume_id: str, extracted_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update the extracted_data JSONB column for a resume row."""
+        try:
+            result = self.client.table("resumes")\
+                .update({"extracted_data": extracted_data})\
+                .eq("id", resume_id)\
+                .execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            print(f"[SUPABASE] Error updating resume extracted_data: {e}")
+            return None
     
     # Internship Operations
     async def save_internship(self, internship_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -269,6 +282,175 @@ class SupabaseService:
         except Exception as e:
             print(f"Error deleting file: {e}")
             return False
+
+
+    # Discovered Company Operations
+    async def upsert_discovered_company(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Upsert a discovered company record.
+
+        On conflict of (user_id, domain, role_title) when domain is known,
+        or (user_id, company_name, role_title) when domain is null,
+        this updates last_seen_at and source_query instead of duplicating.
+        """
+        try:
+            user_id = data.get("user_id")
+            company_name = data.get("company_name")
+            domain = data.get("domain")
+            role_title = data.get("role_title")
+
+            if not all([user_id, company_name, role_title]):
+                print(f"[SUPABASE] Missing required fields for discovered_company upsert")
+                return None
+
+            # Build match criteria using the same logic as our partial unique indexes
+            match = {"user_id": user_id, "role_title": role_title}
+            if domain:
+                match["domain"] = domain
+            else:
+                match["company_name"] = company_name
+
+            # Try to find existing row
+            query = self.client.table("discovered_companies").select("id").eq("user_id", user_id).eq("role_title", role_title)
+
+            if domain:
+                query = query.eq("domain", domain)
+            else:
+                query = query.eq("company_name", company_name).is_("domain", "null")
+
+            existing = query.execute()
+
+            if existing.data:
+                # Update — refresh last_seen_at and optionally source_query/snippet
+                row_id = existing.data[0]["id"]
+                update_fields = {"last_seen_at": datetime.now(timezone.utc).isoformat()}
+                if data.get("source_query"):
+                    update_fields["source_query"] = data["source_query"]
+                if data.get("job_description_snippet"):
+                    update_fields["job_description_snippet"] = data["job_description_snippet"]
+
+                result = self.client.table("discovered_companies")\
+                    .update(update_fields)\
+                    .eq("id", row_id)\
+                    .execute()
+                print(f"[SUPABASE] Updated discovered_company {row_id}: {data.get('company_name')} / {data.get('role_title')}")
+                return result.data[0] if result.data else None
+            else:
+                # Insert
+                insert_data = {
+                    "user_id": user_id,
+                    "company_name": company_name,
+                    "domain": domain,
+                    "role_title": role_title,
+                    "location": data.get("location"),
+                    "job_description_snippet": data.get("job_description_snippet"),
+                    "source_url": data.get("source_url"),
+                    "source_query": data.get("source_query"),
+                    "email_status": data.get("email_status", "not_found"),
+                }
+                result = self.client.table("discovered_companies").insert(insert_data).execute()
+                print(f"[SUPABASE] Inserted discovered_company: {data.get('company_name')} / {data.get('role_title')}")
+                return result.data[0] if result.data else None
+
+        except Exception as e:
+            print(f"[SUPABASE] Error upserting discovered_company: {e}")
+            return None
+
+    async def get_discovered_companies(
+        self,
+        user_id: str,
+        email_status: Optional[str] = None,
+        limit: int = 50
+    ) -> list:
+        """Get discovered companies for a user, optionally filtered by email_status."""
+        try:
+            query = self.client.table("discovered_companies")\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .order("last_seen_at", desc=True)\
+                .limit(limit)
+
+            if email_status:
+                query = query.eq("email_status", email_status)
+
+            result = query.execute()
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"[SUPABASE] Error fetching discovered companies: {e}")
+            return []
+
+    async def get_discovered_companies_paginated(
+        self,
+        user_id: str,
+        email_status: Optional[str] = None,
+        limit: int = 50,
+        cursor: Optional[str] = None,
+    ) -> dict:
+        """
+        Cursor-paginated version of get_discovered_companies.
+
+        *cursor* is an opaque string encoding ``last_seen_at|id`` so the
+        frontend only has to pass one value.  Returns items strictly older
+        than the cursor (or earlier in insertion order when timestamps tie),
+        plus a ``next_cursor`` for the subsequent page.
+        """
+        try:
+            query = self.client.table("discovered_companies")\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .order("last_seen_at", desc=True)\
+                .order("id", desc=True)\
+                .limit(limit)
+
+            if email_status:
+                query = query.eq("email_status", email_status)
+
+            if cursor:
+                parts = cursor.split("|", 1)
+                if len(parts) == 2:
+                    cursor_ts, cursor_id = parts
+                    # last_seen_at < cursor_ts  OR (last_seen_at == cursor_ts AND id < cursor_id)
+                    query = query.or_(
+                        f"last_seen_at.lt.{cursor_ts},"
+                        f"and(last_seen_at.eq.{cursor_ts},id.lt.{cursor_id})"
+                    )
+
+            result = query.execute()
+            data = result.data if result.data else []
+
+            next_cursor = None
+            if len(data) == limit:
+                last = data[-1]
+                ts = last.get("last_seen_at", "")
+                lid = last.get("id", "")
+                next_cursor = f"{ts}|{lid}"
+
+            return {
+                "data": data,
+                "next_cursor": next_cursor,
+            }
+
+        except Exception as e:
+            print(f"[SUPABASE] Error fetching discovered companies (paginated): {e}")
+            return {"data": [], "next_cursor": None}
+
+    async def update_company_email_status(
+        self,
+        company_id: str,
+        user_id: str,
+        email_status: str
+    ) -> Optional[Dict[str, Any]]:
+        """Update the email_status for a discovered company row."""
+        try:
+            result = self.client.table("discovered_companies")\
+                .update({"email_status": email_status})\
+                .eq("id", company_id)\
+                .eq("user_id", user_id)\
+                .execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            print(f"[SUPABASE] Error updating company email status: {e}")
+            return None
 
 
 # Singleton instance
