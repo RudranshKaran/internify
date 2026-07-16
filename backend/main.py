@@ -38,25 +38,24 @@ app = FastAPI(
 )
 
 # Configure CORS
-# Allow multiple origins including local development and production
+# Allow multiple origins including local development and production.
+# Production origins must be supplied via CORS_ORIGINS (comma-separated).
 origins = [
     "http://localhost:3000",
-    "http://localhost:3001", 
-    "https://*.vercel.app",
-    "https://internflow.vercel.app",
-    "https://internflow-*.vercel.app",
+    "http://localhost:3001",
 ]
 
 # Get additional origins from environment variable
 env_origins = os.getenv("CORS_ORIGINS", "")
 if env_origins:
-    origins.extend(env_origins.split(","))
+    origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
 
+# allow_credentials=True requires an explicit origin list - never "*".
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for now
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -118,16 +117,16 @@ async def global_exception_handler(request, exc):
 @app.on_event("startup")
 async def startup_event():
     """Run on application startup"""
-    print("🚀 InternFlow API is starting up...")
-    print(f"📝 Documentation available at: /docs")
-    print(f"🔧 Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    print("InternFlow API is starting up...")
+    print(f"Documentation available at: /docs")
+    print(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
 
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
     """Run on application shutdown"""
-    print("👋 InternFlow API is shutting down...")
+    print("InternFlow API is shutting down...")
 
 
 if __name__ == "__main__":

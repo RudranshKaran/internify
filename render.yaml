@@ -1,0 +1,34 @@
+# Render deployment config for the InternFlow backend (FastAPI).
+# Place this at the repo root; Render will build from the /backend directory.
+
+services:
+  - type: web
+    name: internflow-backend
+    runtime: python
+    rootDir: backend
+    region: oregon          # change to your preferred region
+    plan: free              # switch to a paid plan for production traffic
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

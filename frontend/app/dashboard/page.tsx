@@ -8,6 +8,7 @@ import { toast } from '@/components/Toast'
 import ResumeUploader from '@/components/ResumeUploader'
 import InternshipCard from '@/components/InternshipCard'
 import Loader from '@/components/Loader'
+import SearchLoading from '@/components/SearchLoading'
 import { Search } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -32,8 +33,17 @@ export default function DashboardPage() {
       try {
         console.log('Dashboard: Starting auth check...')
         
-        // Clear any old localStorage data to prevent data leakage between users
-        localStorage.removeItem('selectedInternship')
+        // Restore saved search results from sessionStorage so navigating back
+        // from email-preview keeps the list intact
+        const savedInternships = sessionStorage.getItem('dashboardInternships')
+        if (savedInternships) {
+          try {
+            const parsed = JSON.parse(savedInternships)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setInternships(parsed)
+            }
+          } catch {}
+        }
         
         // Use getUser() instead of getSession() - it's more reliable and validates the JWT
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -174,6 +184,11 @@ export default function DashboardPage() {
 
       setInternships(mapped)
 
+      // Save to sessionStorage so results persist when navigating back from email-preview
+      if (mapped.length > 0) {
+        sessionStorage.setItem('dashboardInternships', JSON.stringify(mapped))
+      }
+
       if (mapped.length === 0) {
         toast.info(
           'Search is running in the background. Results will appear here once companies are discovered. Try searching again in a moment.'
@@ -239,7 +254,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
 
       {/* Resume Section */}
@@ -297,7 +312,7 @@ export default function DashboardPage() {
             )}
           </div>
           {loading ? (
-            <Loader text="Searching for internships..." />
+            <SearchLoading />
           ) : internships.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
               No companies found yet. Try a different search term.
@@ -343,6 +358,31 @@ export default function DashboardPage() {
       {!resume && (
         <div className="text-center py-12 text-gray-500">
           <p>Upload your resume to start searching for internships</p>
+        </div>
+      )}
+
+      {/* Floating bottom bar with Generate Email button */}
+      {selectedInternship && !loading && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-50 px-4 py-3">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+              <p className="text-sm text-gray-700 truncate">
+                <span className="font-medium">{selectedInternship.title}</span>
+                <span className="text-gray-500"> at </span>
+                <span>{selectedInternship.company}</span>
+              </p>
+            </div>
+            <button
+              onClick={() => handleInternshipSelect(selectedInternship)}
+              className="shrink-0 px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2 shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <span>Generate Email</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

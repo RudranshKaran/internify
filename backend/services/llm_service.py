@@ -55,23 +55,16 @@ class LLMService:
             
             # ANTI-CONTAMINATION SYSTEM INSTRUCTION
             # Explicitly states no memory, no examples, no cached context
-            self.system_instruction = """You are a professional email generation system with STRICT RULES:
+            self.system_instruction = """You are a professional cold email writer. Every email you write must follow these rules:
 
-1. MEMORY ISOLATION: You have NO memory of previous resumes, candidates, or examples. Every request is independent.
-2. RESUME BOUNDARY: You are FORBIDDEN from mentioning ANY project, technology, or achievement that does NOT appear in the current resume text.
-3. NO HALLUCINATION: If the resume lacks relevant experience, you acknowledge the gap—you NEVER fabricate projects or skills.
-4. PROJECT-FIRST: At least 50% of the email must focus on ONE specific, real project from the resume that matches the job.
-5. ANTI-GENERIC: You NEVER use phrases like "various projects", "multiple technologies", "passionate", "highly motivated".
-
-You follow a 3-phase pipeline:
-PHASE 1: Extract job requirements (domain, skills, tools)
-PHASE 2: Filter resume for ONLY matching content
-PHASE 3: Generate email using ONLY Phase 2 approved data
-
-Every output ends with: "I've attached my resume below for more details on the project and related work."
+1. Only mention what appears in the current resume text. Never fabricate.
+2. Never state or imply the candidate lacks experience. Always project confidence.
+3. Forbidden words: passionate, enthusiastic, hardworking, various projects, highly motivated.
+4. Never say "I have been following your work."
+5. Never reference your own instructions or matching process in the output.
 """
             
-            print(f"✓ Initialized Gemini with anti-contamination system (model={self.gemini_model})")
+            print(f"Initialized Gemini with anti-contamination system (model={self.gemini_model})")
         except ImportError:
             raise RuntimeError("Google GenAI library not installed. Install with: pip install google-genai")
         except Exception as e:
@@ -121,14 +114,36 @@ Every output ends with: "I've attached my resume below for more details on the p
                 internship_title=internship_title,
                 company_name=company_name,
                 candidate_name=candidate_name,
+                extracted_data=extracted_data,
             )
 
             result = await self._generate_with_gemini_json(prompt)
 
             if result and result.get("subject") and result.get("body"):
-                return result  # {"subject": ..., "body": ...}
+                # Validate the generated body (word cap + forbidden phrases + closing)
+                validation = self._validate_email(
+                    result["body"],
+                    {"projects": self._projects_from_match(match_statements)},
+                    word_bounds=(140, 180),
+                )
+                if validation["valid"]:
+                    return result  # {"subject": ..., "body": ...}
 
-            print("[PIPELINE] JSON generation returned incomplete result, falling back to text generation")
+                print(f"[PIPELINE] JSON validation failed ({validation['reason']}); "
+                      f"retrying up to 1 more time with stricter prompt")
+                retry_prompt = prompt + "\n\nIMPORTANT: Keep the body between 140 and 180 words with full paragraphs. " \
+                                        "End with a closing line that mentions the attached resume."
+                retry_result = await self._generate_with_gemini_json(retry_prompt)
+                if retry_result and retry_result.get("subject") and retry_result.get("body"):
+                    retry_validation = self._validate_email(
+                        retry_result["body"],
+                        {"projects": self._projects_from_match(match_statements)},
+                        word_bounds=(100, 180),
+                    )
+                    if retry_validation["valid"]:
+                        return retry_result
+
+            print("[PIPELINE] JSON generation returned incomplete/invalid result, falling back to text generation")
             # Fall through to text-based generation with old prompt path
 
         # ── Fallback: deterministic 3-phase pipeline ───────────
@@ -137,12 +152,12 @@ Every output ends with: "I've attached my resume below for more details on the p
             internship_description,
             internship_title
         )
-        print(f"[PHASE 1] ✓ Detected domain: {job_requirements['domain']}")
+        print(f"[PHASE 1] Detected domain: {job_requirements['domain']}")
 
         print("\n[PHASE 2] Filtering resume for job-relevant content...")
         resume_match = self._filter_resume_by_job(resume_text, job_requirements)
-        print(f"[PHASE 2] ✓ Found {len(resume_match['projects'])} relevant project(s)")
-        print(f"[PHASE 2] ✓ Found {len(resume_match['technologies'])} matching technologies")
+        print(f"[PHASE 2] Found {len(resume_match['projects'])} relevant project(s)")
+        print(f"[PHASE 2] Found {len(resume_match['technologies'])} matching technologies")
 
         if not resume_match['technologies']:
             print(f"[PHASE 2] ⚠ WARNING: No matching technologies found!")
@@ -159,8 +174,23 @@ Every output ends with: "I've attached my resume below for more details on the p
 
         if not email_body:
             error_hint = f"Gemini API returned empty result. Check GEMINI_API_KEY validity, quota, and that the model '{self.gemini_model}' is accessible."
-            print(f"\n[PIPELINE] ⚠️ {error_hint}")
+            print(f"\n[PIPELINE] {error_hint}")
             raise RuntimeError(error_hint)
+
+        # Enforce word cap + content checks on the fallback body
+        validation = self._validate_email(email_body, resume_match, word_bounds=(140, 180))
+        if not validation["valid"]:
+            print(f"[PIPELINE] Fallback body failed validation ({validation['reason']}); regenerating once")
+            retry_prompt = prompt + "\n\nIMPORTANT: Keep the body between 140 and 180 words with full paragraphs. " \
+                                    "End with a closing line that mentions the attached resume."
+            retry_body = await self._generate_with_gemini(retry_prompt)
+            if retry_body:
+                retry_validation = self._validate_email(retry_body, resume_match, word_bounds=(140, 180))
+                if retry_validation["valid"]:
+                    email_body = retry_body
+                else:
+                    print(f"[PIPELINE] Retry also failed validation ({retry_validation['reason']}); "
+                          f"passing through Gemini output")
 
         # Old-style subject generation for fallback path
         subject = await self.generate_subject_line(
@@ -525,7 +555,7 @@ Write ONLY the email body (no subject, no signature):
         primary_project = projects[0] if projects else None
         
         # Build the STRICT prompt
-        prompt = f"""GENERATION TASK: Write a professional internship cold email
+        prompt = f"""GENERATION TASK: Write a complete, professional internship cold email.
 
 ## APPROVED DATA FROM PHASE 2 (USE ONLY THIS - NO OTHER DATA ALLOWED):
 
@@ -556,76 +586,87 @@ Write ONLY the email body (no subject, no signature):
 1. **RESUME BOUNDARY (NON-NEGOTIABLE):**
    - You are FORBIDDEN from mentioning ANY technology not listed above
    - You are FORBIDDEN from mentioning ANY project not listed above
-   - If the approved data is insufficient, you write a SHORT, HONEST email acknowledging the gap
+   - If the approved data is insufficient, focus on what IS present - the candidate strongest available skills and projects
    - You NEVER fabricate or hallucinate content
+   - You may restate a listed skill or project name, but you MUST NOT invent work done with it (no "predictive analytics", "model deployment", "fine-tuning", or other outcomes/details that are not explicitly stated above)
 
-2. **PROJECT-FIRST STRUCTURE (50%+ of email):**
-   - Opening: 1 line mentioning {company_name}'s work in {domain}
-   - Intro: 1 line as "{intro}"
-   - PROJECT SECTION (3-4 lines): MUST use approved project name and technologies
-   - Connection: 1-2 lines linking project to {work_type}
-   - CTA: 1 line offering to discuss
-   - Closing: "I've attached my resume below for more details on the project and related work."
+2. **LENGTH (MANDATORY):**
+   - The email body MUST be 140 to 180 words. This is a hard requirement.
+   - Do NOT write a short stub. Write full, developed paragraphs.
 
-3. **ANTI-GENERIC ENFORCEMENT:**
-   - FORBIDDEN PHRASES: "various projects", "multiple technologies", "passionate", "highly motivated", "dear hiring", "several"
-   - Minimum length: 120 words
-   - MUST mention at least ONE specific project name from approved list
+3. **EMAIL STRUCTURE:**
+   - Paragraph 1: Open by naming the candidate's most relevant project or skill and its tech stack. Connect it directly to this role.
+   - Paragraph 2: Describe ONE specific project in concrete detail - what it does, the problem it solved, and the technologies used.
+   - Paragraph 3: One or two sentences showing genuine understanding of what {company_name} builds, tied to this domain.
+   - Paragraph 4: A concise call to action offering to discuss further.
+   - Closing: "Best," then the candidate name on a new line.
+   - Final line: "I've attached my resume below for more details on the project and related work."
 
-4. **VALIDATION REQUIREMENTS:**
-   - Every technology mentioned must be from the approved list above
-   - Every project mentioned must be from the approved list above
-   - Email must be 140-180 words
-   - At least 50% must focus on the specific project
+4. **ANTI-GENERIC ENFORCEMENT:**
+   - FORBIDDEN WORDS: passionate, enthusiastic, hardworking, various projects, highly motivated.
+   - Never say "I've been following your work."
 
-## EXAMPLE STRUCTURE (using ONLY approved data):
-
-```
-I've been following {company_name}'s work in {domain}.
-
-I'm an {intro}.
-
-One project I've spent significant time on is [APPROVED PROJECT NAME], [describe using APPROVED TECHNOLOGIES]. While building this, I worked extensively with [APPROVED TECH 1], [APPROVED TECH 2], and [APPROVED TECH 3]—skills that directly translate to the {work_type} your team focuses on.
-
-Designing [PROJECT NAME] required balancing [relevant challenge for domain], something equally important when building production-grade {domain} solutions.
-
-I'd be happy to walk through the project if helpful.
-
-I've attached my resume below for more details on the project and related work.
-```
+5. **NEVER ADMIT A GAP:**
+   - Never state or imply the candidate lacks experience. Always project confidence.
 
 ## NOW GENERATE THE EMAIL:
 
-Use ONLY the approved technologies and projects listed above. If no match exists, write: "I don't have directly relevant experience in {domain}, but I'm eager to learn." Do NOT fabricate details.
-
-Write ONLY the email body (no subject, no signature):
+Write ONLY the email body, 140-180 words, ending with "Best," the candidate name, and the required resume-closing line. Never mention lack of experience.
 """
         
         return prompt
     
-    def _validate_email(self, email: str, resume_match: Dict) -> Dict:
+    EMAIL_MIN_WORDS = 140
+    EMAIL_MAX_WORDS = 180
+
+    @staticmethod
+    def _projects_from_match(match_statements: List[str]) -> List[Dict]:
+        """Extract project-name dicts from match statements for validation."""
+        import re
+        projects = []
+        for stmt in match_statements:
+            m = re.search(r"project '([^']+)'", stmt)
+            if m:
+                projects.append({"name": m.group(1)})
+        return projects
+
+    def _validate_email(self, email: str, resume_match: Dict, word_bounds: tuple = None) -> Dict:
         """
-        Validate email for contamination, hallucination, and generic content
-        
+        Validate email for length, contamination, hallucination, and generic content.
+
+        Args:
+            email: The generated email body.
+            resume_match: The Phase-2 approved data (projects/technologies).
+            word_bounds: Optional (min, max) word-count bounds to enforce.
+
         Returns:
-            {"valid": bool, "reason": str}
+            {"valid": bool, "reason": str, "word_count": int}
         """
         if not email or len(email.strip()) == 0:
             return {
                 "valid": False,
-                "reason": "Empty email"
+                "reason": "Empty email",
+                "word_count": 0,
             }
-        
+
         email_lower = email.lower()
-        
-        # Check 1: Minimum length (100 words - relaxed from 120)
         word_count = len(email.split())
-        if word_count < 100:
+
+        # Check 1: Enforced word-count bounds
+        min_words, max_words = word_bounds or (self.EMAIL_MIN_WORDS, self.EMAIL_MAX_WORDS)
+        if word_count < min_words:
             return {
                 "valid": False,
-                "reason": f"Too short ({word_count} words, minimum 100)"
+                "reason": f"Email too short ({word_count} words, min {min_words})",
+                "word_count": word_count,
             }
-        
+        if word_count > max_words:
+            return {
+                "valid": False,
+                "reason": f"Email too long ({word_count} words, max {max_words})",
+                "word_count": word_count,
+            }
+
         # Check 2: Generic phrases (FORBIDDEN) - but only fail if multiple found
         forbidden_phrases = [
             "various projects",
@@ -642,7 +683,8 @@ Write ONLY the email body (no subject, no signature):
         if len(found_forbidden) >= 2:  # Allow 1, fail on 2+
             return {
                 "valid": False,
-                "reason": f"Contains too many generic phrases: {', '.join(found_forbidden)}"
+                "reason": f"Contains too many generic phrases: {', '.join(found_forbidden)}",
+                "word_count": word_count,
             }
         
         # Check 3: Must mention approved project or have honest acknowledgment (relaxed)
@@ -654,20 +696,18 @@ Write ONLY the email body (no subject, no signature):
                     has_project_mention = True
                     break
             
-            has_honest_ack = "don't have directly relevant" in email_lower or "no direct experience" in email_lower or "eager to learn" in email_lower
-            
-            # Also check if email mentions ANY capitalized project-like word
-            words = email.split()
-            has_capitalized_project = any(
-                len(word) > 3 and word[0].isupper() and word.isalpha() 
-                for word in words
-            )
-            
-            if not has_project_mention and not has_honest_ack and not has_capitalized_project:
-                return {
-                    "valid": False,
-                    "reason": "No specific project name mentioned despite approved projects available"
-                }
+            if not has_project_mention:
+                words = email.split()
+                has_capitalized_project = any(
+                    len(word) > 3 and word[0].isupper() and word.isalpha() 
+                    for word in words
+                )
+                if not has_capitalized_project:
+                    return {
+                        "valid": False,
+                        "reason": "No specific project name mentioned despite approved projects available",
+                        "word_count": word_count,
+                    }
         
         # Check 4: Must end with required closing (relaxed - check for variations)
         closing_variations = [
@@ -682,11 +722,12 @@ Write ONLY the email body (no subject, no signature):
         if not has_closing:
             return {
                 "valid": False,
-                "reason": "Missing required closing line about resume"
+                "reason": "Missing required closing line about resume",
+                "word_count": word_count,
             }
         
         # All checks passed
-        return {"valid": True, "reason": "All validation passed"}
+        return {"valid": True, "reason": "All validation passed", "word_count": word_count}
     
     async def _generate_with_gemini(self, prompt: str, retry_count: int = 0) -> Optional[str]:
         """Generate email using Gemini API with safety filter and rate limit handling"""
@@ -699,7 +740,7 @@ Write ONLY the email body (no subject, no signature):
             # Create generation config with relaxed safety
             config = types.GenerateContentConfig(
                 temperature=0.7,
-                max_output_tokens=600,
+                max_output_tokens=8192,
                 system_instruction=self.system_instruction,
                 safety_settings=self.safety_settings
             )
@@ -719,18 +760,18 @@ Write ONLY the email body (no subject, no signature):
                 if hasattr(candidate, 'finish_reason'):
                     finish_reason = str(candidate.finish_reason)
                     if 'SAFETY' in finish_reason or 'BLOCKED' in finish_reason:
-                        print(f"[GEMINI] ⚠️ Content blocked by safety filters: {finish_reason}")
+                        print(f"[GEMINI] Content blocked by safety filters: {finish_reason}")
                         print("[GEMINI] Attempting simplified generation...")
                         
                         # Try with simplified, more neutral prompt
                         return await self._generate_with_gemini_simplified(prompt)
             
-            print(f"[GEMINI] ✓ Response received finish_reason={candidate.finish_reason if hasattr(response, 'candidates') and response.candidates else 'unknown'}")
+            print(f"[GEMINI] Response received finish_reason={candidate.finish_reason if hasattr(response, 'candidates') and response.candidates else 'unknown'}")
             
             # Check if response has text
             if response.text:
                 email_text = response.text.strip()
-                print(f"[GEMINI] ✓ Text generated: {len(email_text)} chars")
+                print(f"[GEMINI] Text generated: {len(email_text)} chars")
                 return email_text
             else:
                 print("[GEMINI] No text in response - attempting fallback")
@@ -741,7 +782,7 @@ Write ONLY the email body (no subject, no signature):
             
             # Check for rate limit / quota exceeded
             if '429' in str(e) or 'quota' in error_msg or 'resource_exhausted' in error_msg or 'rate limit' in error_msg:
-                print(f"[GEMINI] ⚠️ RATE LIMIT EXCEEDED")
+                print(f"[GEMINI] RATE LIMIT EXCEEDED")
                 print(f"[GEMINI] Your Gemini API free tier quota is exhausted")
                 print(f"[GEMINI] Error: {str(e)[:200]}...")
                 
@@ -755,7 +796,7 @@ Write ONLY the email body (no subject, no signature):
                     await asyncio.sleep(retry_delay)
                     return await self._generate_with_gemini(prompt, retry_count + 1)
                 else:
-                    print(f"[GEMINI] ❌ Cannot retry - quota exhausted")
+                    print(f"[GEMINI] Cannot retry - quota exhausted")
                     print(f"[GEMINI] Solutions:")
                     print(f"[GEMINI]   1. Wait for quota reset (usually daily)")
                     print(f"[GEMINI]   2. Upgrade Gemini API plan")
@@ -763,11 +804,22 @@ Write ONLY the email body (no subject, no signature):
             
             # Check for safety filter blocks
             elif 'safety' in error_msg or 'blocked' in error_msg or 'filter' in error_msg:
-                print(f"[GEMINI] ⚠️ Safety filter error: {e}")
+                print(f"[GEMINI] Safety filter error: {e}")
                 print("[GEMINI] Attempting simplified generation...")
                 return await self._generate_with_gemini_simplified(prompt)
             
-            # Other errors — preserve the actual API error message
+            # 503 UNAVAILABLE - retry with exponential backoff
+            elif '503' in str(e) or 'UNAVAILABLE' in str(e):
+                if retry_count < 3:
+                    wait = 2 ** retry_count
+                    print(f"[GEMINI] 503 UNAVAILABLE - retrying in {wait}s (attempt {retry_count + 1}/3)")
+                    import asyncio
+                    await asyncio.sleep(wait)
+                    return await self._generate_with_gemini(prompt, retry_count + 1)
+                else:
+                    print("[GEMINI] 503 UNAVAILABLE - all retries exhausted")
+                    raise RuntimeError("Gemini API 503 UNAVAILABLE after 3 retries") from e
+            # Other errors - preserve the actual API error message
             else:
                 print(f"[GEMINI] API error: {e}")
                 raise RuntimeError(f"Gemini API error: {str(e)}") from e
@@ -844,8 +896,7 @@ Requirements:
 2. Focus on the specific project mentioned
 3. Mention how the technical skills relate to the opportunity
 4. End with: "I've attached my resume below for more details on the project and related work."
-5. Length: 140-160 words
-6. Do NOT use generic phrases like "passionate" or "highly motivated"
+5. Do NOT use generic phrases like "passionate" or "highly motivated"
 
 Write only the email body (no subject line, no signature):"""
             
@@ -871,7 +922,7 @@ Write only the email body (no subject line, no signature):"""
             
             config = types.GenerateContentConfig(
                 temperature=0.6,  # Even lower temperature
-                max_output_tokens=500,
+                max_output_tokens=8192,
                 safety_settings=ultra_safe_settings
             )
             
@@ -885,7 +936,7 @@ Write only the email body (no subject line, no signature):"""
             
             if response.text:
                 email_text = response.text.strip()
-                print(f"[GEMINI] ✓ Simplified generation successful: {len(email_text)} chars")
+                print(f"[GEMINI] Simplified generation successful: {len(email_text)} chars")
                 return email_text
             else:
                 print("[GEMINI] Simplified generation also failed (empty response)")
@@ -894,37 +945,63 @@ Write only the email body (no subject line, no signature):"""
         except RuntimeError:
             raise
         except Exception as e:
-            print(f"[GEMINI] ❌ Simplified generation error: {e}")
+            print(f"[GEMINI] Simplified generation error: {e}")
             raise RuntimeError(f"Gemini simplified fallback failed: {str(e)}") from e
     
     async def generate_subject_line(self, job_title: str, company_name: str) -> str:
-        """Generate a subject line following InternFlow project-first specification"""
-        import random
-        
-        templates = [
-            f"Built InternFlow — relevant to your team",
-            f"Applying AI to {job_title.split()[0].lower()} problems",
-            f"A project aligned with {company_name}",
-            f"Built a tool for {job_title.split()[0].lower()}",
-            f"Project relevant to your hiring focus",
-            f"How I built an AI tool"
-        ]
-        
-        return random.choice(templates)
-
-    async def _generate_with_gemini_json(self, prompt: str) -> Optional[Dict]:
         """
-        Generate a JSON response from Gemini using ``response_mime_type``.
+        Generate a subject line via Gemini that is specific, non-generic, and
+        free of product/meta references (e.g. the old hardcoded "InternFlow").
 
-        Uses a dedicated config with ``max_output_tokens=800`` and
-        ``response_mime_type="application/json"`` so the model returns
-        proper structured output that never gets cut off mid-sentence.
+        Falls back to a deterministic template only if the model call fails.
+        """
+        from google.genai import types
+
+        job_word = job_title.split()[0].lower() if job_title else "role"
+        prompt = (
+            f"Write ONE concise, specific email subject line for a student internship "
+            f"application to {company_name} for the role of {job_title}. "
+            f"The subject must reference the candidate's relevant project or skill and the company — "
+            f"never use generic phrases like 'excited' or 'passionate', and never mention any "
+            f"product name or tool that was not provided. Return only the subject line text, no quotes."
+        )
+
+        try:
+            config = types.GenerateContentConfig(
+                temperature=0.5,
+                max_output_tokens=64,
+                safety_settings=self.safety_settings,
+            )
+            response = self.genai_client.models.generate_content(
+                model=self.gemini_model,
+                contents=prompt,
+                config=config,
+            )
+            subject = (response.text or "").strip().strip('"')
+            if subject:
+                # Strip any accidental meta/product reference
+                subject = re.sub(r"\bInternFlow\b", "", subject, flags=re.IGNORECASE).strip(" -—:")
+                return subject or f"Project relevant to your {job_word} team at {company_name}"
+        except Exception as e:
+            print(f"[SUBJECT] Gemini subject generation failed ({e}); using template fallback")
+
+        templates = [
+            f"Built a project relevant to your {job_word} team at {company_name}",
+            f"How my work aligns with {company_name}'s {job_word} work",
+            f"A project aligned with {company_name}",
+            f"Relevant project for the {job_title} role at {company_name}",
+        ]
+        return templates[0]
+
+    async def _generate_with_gemini_json(self, prompt: str, retry_count: int = 0) -> Optional[Dict]:
+        """
+        Generate a JSON response from Gemini. Retries on 503 UNAVAILABLE.
         """
         from google.genai import types
 
         config = types.GenerateContentConfig(
             temperature=0.7,
-            max_output_tokens=800,
+            max_output_tokens=8192,
             safety_settings=self.safety_settings,
             response_mime_type="application/json",
         )
@@ -936,7 +1013,25 @@ Write only the email body (no subject line, no signature):"""
                 config=config,
             )
 
-            text = response.text.strip() if response.text else ""
+            # Log raw response with length BEFORE parsing to detect truncation
+            raw_text = response.text or ""
+            print(f"[GEMINI_JSON] Raw response: {len(raw_text)} chars, starts_with: {raw_text[:100]}")
+
+            # Check finish_reason for truncation
+            if hasattr(response, 'candidates') and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'finish_reason'):
+                    finish_reason = str(candidate.finish_reason)
+                    print(f"[GEMINI_JSON] finish_reason={finish_reason}")
+                    if 'MAX_TOKENS' in finish_reason:
+                        print(f"[GEMINI_JSON] WARNING: TRUNCATION DETECTED - finish_reason=MAX_TOKENS")
+                        if retry_count < 1:
+                            print(f"[GEMINI_JSON] Retrying once with higher token limit")
+                            return await self._generate_with_gemini_json(
+                                prompt, retry_count + 1
+                            )
+
+            text = raw_text.strip()
             if not text:
                 print("[GEMINI_JSON] Empty response")
                 return None
@@ -952,12 +1047,22 @@ Write only the email body (no subject line, no signature):"""
                 print(f"[GEMINI_JSON] Incomplete: subject={bool(subject)} body={bool(body)}")
                 return None
 
-            print(f"[GEMINI_JSON] ✓ subject={len(subject)}ch body={len(body)}ch "
-                  f"({len(body.split())} words)")
+            print(f"[GEMINI_JSON] subject={len(subject)}ch body={len(body)}ch ({len(body.split())} words)")
             return {"subject": subject, "body": body}
 
         except Exception as e:
-            print(f"[GEMINI_JSON] ❌ Failed: {e}")
+            error_str = str(e)
+            if '503' in error_str or 'UNAVAILABLE' in error_str:
+                if retry_count < 3:
+                    wait = 2 ** retry_count
+                    print(f"[GEMINI_JSON] 503 - retrying in {wait}s ({retry_count + 1}/3)")
+                    import asyncio
+                    await asyncio.sleep(wait)
+                    return await self._generate_with_gemini_json(prompt, retry_count + 1)
+                else:
+                    print("[GEMINI_JSON] 503 - all retries exhausted, falling through")
+                    return None
+            print(f"[GEMINI_JSON] Failed: {e}")
             return None
 
     # ── Structured Job Requirement Extraction ──────────────────────
@@ -1001,7 +1106,7 @@ Job posting:
 
             config = types.GenerateContentConfig(
                 temperature=0.2,
-                max_output_tokens=1024,
+                max_output_tokens=8192,
                 safety_settings=self.safety_settings,
             )
 
@@ -1028,7 +1133,7 @@ Job posting:
                 "technologies_mentioned": data.get("technologies_mentioned", []),
                 "domain": data.get("domain", ""),
             }
-            print(f"[JOB_EXTRACT] ✓ Domain={validated['domain']}, "
+            print(f"[JOB_EXTRACT] Domain={validated['domain']}, "
                   f"req_skills={len(validated['required_skills'])}, "
                   f"pref_skills={len(validated['preferred_skills'])}, "
                   f"resp={len(validated['core_responsibilities'])}, "
@@ -1036,7 +1141,7 @@ Job posting:
             return validated
 
         except Exception as e:
-            print(f"[JOB_EXTRACT] ❌ Failed: {e}")
+            print(f"[JOB_EXTRACT] Failed: {e}")
             return None
 
     # ── Resume-to-Job Matching ──────────────────────────────────────
@@ -1088,7 +1193,7 @@ Job posting:
             result.append(
                 f"candidate has a background in "
                 f"{', '.join(extracted_data.get('skills', [])[:3]) or 'general engineering'} "
-                f"and is eager to apply their learning to the {job_reqs.get('domain', 'role')}"
+                f"and is a strong candidate for the {job_reqs.get('domain', 'role')} role"
             )
 
         for i, m in enumerate(result):
@@ -1216,7 +1321,7 @@ Job posting:
 
     _STRUCTURED_PROMPT_CONFIG = {
         "temperature": 0.7,
-        "max_output_tokens": 800,
+        "max_output_tokens": 8192,
         "safety_settings": None,  # set at call time
         "response_mime_type": "application/json",
     }
@@ -1228,16 +1333,14 @@ Job posting:
         internship_title: str,
         company_name: str,
         candidate_name: str = "",
+        extracted_data: Optional[Dict] = None,
     ) -> str:
         """
         Build the email-generation prompt that instructs Gemini to return
         **JSON** with ``subject`` and ``body`` fields.  The model receives
-        only the explicit match statements — not raw resume text or full
-        structured data.
-
-        Rules are tighter than the old prompt: no "following your work"
-        openers, body must be 100–130 words, and at least one match must
-        be referenced by name.
+        the explicit match statements plus the candidate's ACTUAL pre-extracted
+        resume facts (skills/projects/experience) so it is grounded in the real
+        resume — nothing else.
         """
         matches_block = "\n".join(f"  • {m}" for m in match_statements)
 
@@ -1245,15 +1348,43 @@ Job posting:
         resp = "\n".join(f"  • {r}" for r in job_reqs.get("core_responsibilities", []) or ["N/A"])
         domain = job_reqs.get("domain", "software development")
 
+        # Build the candidate's REAL resume facts block from extracted_data.
+        resume_facts_block = "N/A (no structured resume data available)"
+        if extracted_data:
+            ex_skills = extracted_data.get("skills", []) or []
+            ex_projects = extracted_data.get("projects", []) or []
+            ex_experience = extracted_data.get("experience", []) or []
+
+            skill_lines = "\n".join(f"    - {s}" for s in ex_skills) or "    - (none listed)"
+            proj_lines = ""
+            for p in ex_projects:
+                techs = ", ".join(p.get("tech_stack", []) or [])
+                proj_lines += (f"    - {p.get('name', '')}: {p.get('description', '')}"
+                               f"{(' [' + techs + ']') if techs else ''}\n")
+            proj_lines = proj_lines or "    - (none listed)"
+            exp_lines = ""
+            for e in ex_experience:
+                exp_lines += (f"    - {e.get('role', '')} @ {e.get('company', '')}"
+                              f" ({e.get('duration', '')})\n")
+            exp_lines = exp_lines or "    - (none listed)"
+
+            resume_facts_block = (
+                f"**Skills:**\n{skill_lines}\n\n"
+                f"**Projects:**\n{proj_lines}\n"
+                f"**Experience:**\n{exp_lines}"
+            )
+
         prompt = f"""GENERATION TASK: Write a professional internship cold email.
 
 Return ONLY valid JSON with exactly these two keys — no markdown, no explanation:
 
 {{"subject": "the subject line here", "body": "the email body here"}}
 
-## MATCHED DATA (THIS IS THE ONLY DATA YOU MAY USE):
+## CANDIDATE'S ACTUAL RESUME (THE ONLY SOURCE OF TRUTH — DO NOT INVENT ANYTHING):
 
-The following explicit matches were found between the candidate's resume and the job requirements:
+{resume_facts_block}
+
+## MATCHED DATA (explicit resume-to-job overlaps found):
 
 {matches_block}
 
@@ -1265,31 +1396,40 @@ The following explicit matches were found between the candidate's resume and the
 - Core Responsibilities:
 {resp}
 
-## CANDIDATE NAME (use this in the subject line):
+## CANDIDATE NAME (use this in the subject line and closing):
 {candidate_name or "the applicant"}
 
 ## STRICT RULES:
 
-1. **MATCH BOUNDARY**: You MUST ONLY reference the content in the Matched Data section above.  Do NOT fabricate additional projects, skills, or experience.
+1. **ZERO FABRICATION (NON-NEGOTIABLE):** Every skill, project, technology, and experience you mention MUST appear verbatim in the CANDIDATE'S ACTUAL RESUME section above. You may NOT add details, outcomes, metrics, or elaborations that are not explicitly stated there. If the resume says only "Python", you may write "Python" — you may NOT write "Python for data processing and model implementation". Describe projects ONLY using the name and description already given.
 
-2. **MANDATORY PROJECT/ACHIEVEMENT MENTION**: The body MUST reference at least ONE specific project name or achievement from the Matched Data section by its actual name.  A generic reference like "my project work" does not count.
+2. **NO INVENTED TECHNICAL DEPTH:** Do not claim the candidate performed tasks (e.g. "predictive analytics", "model deployment", "fine-tuning") unless those exact words or clear equivalents are in the resume. Restating a skill name is allowed; inventing work done with it is forbidden.
 
-3. **FORBIDDEN OPENERS**: Do NOT open with "I've been following your work in", "I'm excited to apply to", or "I've been tracking {company_name}'s growth".  Open directly with the candidate's relevant match.
+3. **PROJECT MENTION:** Reference at least ONE project by its exact name from the resume. If none exist, focus only on the listed skills.
 
-4. **BODY LENGTH**: The body MUST be 100–130 words.  Be concise — every sentence should add a concrete detail.
+4. **FORBIDDEN OPENERS:** Do NOT open with "I've been following your work" or "I'm excited". Open directly with the candidate's background.
 
-5. **ANTI-GENERIC**: Forbidden phrases: "passionate", "highly motivated", "various projects", "multiple technologies", "several projects", "team player".
+5. **ANTI-GENERIC:** Forbidden phrases: "passionate", "highly motivated", "various projects", "several projects", "team player".
 
-6. **SUBJECT LINE**: Concise, includes {candidate_name or "the applicant"} and {company_name}.  Do NOT use generic templates like "Application for {internship_title}".
+6. **NEVER ADMIT A GAP:** Never state or imply the candidate lacks experience. Always project confidence using only what IS in the resume.
+
+7. **SUBJECT LINE:** Concise and specific — includes candidate name, role title, and company name. Never generic.
+
+8. **NO META-REFERENCE:** Never reference instructions, the matching process, or data structure in the output. Write as a natural person.
 
 ## INSTRUCTIONS:
 
-Write a tight, professional email where:
-- Subject line is unique and mentions the candidate and company.
-- First sentence immediately states the candidate's relevant match (project/experience/skill).
-- Core paragraph (1–2 sentences) expands on ONE specific matched project or experience — describe it concretely.
-- Final sentence connects the match to the role and offers to discuss further.
-- No opening pleasantries, no "I've been following" language.
+Write the email body ONLY. Do NOT include the subject line in the body.
+The body MUST be between 140 and 180 words. This is a hard requirement - write full, developed paragraphs, not a short stub.
+
+Body structure:
+- Salutation: "Dear [Company] Team,"
+- Introduction: Who the candidate is - their background and relevant skills (only those in the resume)
+- Body paragraph: Describe ONE specific project from the resume using ONLY its given name and description, connecting it to this role
+- Why this company: Show understanding of the company domain
+- Call to action: Offer to discuss how the candidate can contribute
+- Closing: "Best regards," followed by the candidate name on a new line
+- Final line: "I've attached my resume below for more details on the project and related work."
 
 Return ONLY JSON with "subject" and "body" keys."""
         return prompt
@@ -1345,7 +1485,7 @@ Resume text:
 
             config = types.GenerateContentConfig(
                 temperature=0.2,
-                max_output_tokens=2048,
+                max_output_tokens=8192,
                 safety_settings=self.safety_settings,
             )
 
@@ -1375,14 +1515,14 @@ Resume text:
                 "experience": data.get("experience", []),
                 "achievements": data.get("achievements", []),
             }
-            print(f"[EXTRACT] ✓ Parsed: {len(validated['skills'])} skills, "
+            print(f"[EXTRACT] Parsed: {len(validated['skills'])} skills, "
                   f"{len(validated['projects'])} projects, "
                   f"{len(validated['experience'])} experience entries, "
                   f"{len(validated['achievements'])} achievements")
             return validated
 
         except Exception as e:
-            print(f"[EXTRACT] ❌ Failed: {e}")
+            print(f"[EXTRACT] Failed: {e}")
             return None
 
 

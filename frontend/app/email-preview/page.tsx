@@ -79,7 +79,10 @@ export default function EmailPreviewPage() {
       console.log('[EMAIL-PREVIEW] Email generated successfully')
       console.log('[EMAIL-PREVIEW] Subject:', response.data.subject)
       console.log('[EMAIL-PREVIEW] Body length:', response.data.body?.length || 0, 'chars')
-      
+      // TRACE-4: body length right before storing in component state / rendering
+      console.log('[TRACE-4] After frontend API response — body:', (response.data.body?.length || 0), 'chars, ends_with:', JSON.stringify(response.data.body?.slice(-50)))
+      console.log('[TRACE-4] Raw body from API:', JSON.stringify(response.data.body))
+
       setSubject(response.data.subject)
       setBody(response.data.body)
     } catch (error: any) {

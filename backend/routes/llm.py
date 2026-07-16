@@ -82,6 +82,9 @@ async def generate_email(
 
         print(f"[LLM] Email generated — subject: {len(subject)}ch, body: {len(body)}ch ({len(body.split())} words)")
 
+        # TRACE-2: body length right after generate_email() returns, before Pydantic response
+        print(f"[TRACE-2] After llm_service.generate_email() — body: {len(body)} chars, ends_with: {repr(body[-40:]) if body else 'EMPTY'}")
+
         return EmailGenerateResponse(
             subject=subject,
             body=body,

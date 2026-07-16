@@ -56,8 +56,12 @@ htmlcov/
 *.swo
 *~
 
-# OS
-Thumbs.db
+# Build artifacts
+*.tsbuildinfo
+build.log
+
+# Vercel
+.vercel/
 
 # Uploads
 uploads/
