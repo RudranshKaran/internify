@@ -49,12 +49,20 @@ export default function ResumeUploader({
     }
   }
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB — matches Supabase bucket limit
+
   const handleFile = (file: File) => {
-    if (file.type === 'application/pdf') {
-      onUpload(file)
-    } else {
+    if (file.type !== 'application/pdf') {
       alert('Please upload a PDF file')
+      return
     }
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert(`File too large. Maximum size is 10MB. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB.`)
+      return
+    }
+
+    onUpload(file)
   }
 
   const handleClick = () => {

@@ -251,18 +251,29 @@ class SupabaseService:
     
     # Storage Operations
     async def upload_file(self, bucket: str, file_path: str, file_data: bytes) -> Optional[str]:
-        """Upload file to Supabase Storage"""
+        """Upload file to Supabase Storage, overwriting if file already exists."""
         try:
-            # Upload with explicit content type for PDF files
             file_options = {"content-type": "application/pdf"}
-            result = self.client.storage.from_(bucket).upload(
-                file_path, 
-                file_data,
-                file_options
-            )
+            try:
+                self.client.storage.from_(bucket).upload(
+                    file_path,
+                    file_data,
+                    file_options
+                )
+            except Exception as e:
+                error_str = str(e).lower()
+                if "duplicate" in error_str or "already exists" in error_str:
+                    print(f"[SUPABASE] File exists at {file_path}, updating...")
+                    self.client.storage.from_(bucket).update(
+                        file_path,
+                        file_data,
+                        file_options
+                    )
+                else:
+                    raise
             return file_path
         except Exception as e:
-            print(f"Error uploading file: {e}")
+            print(f"[SUPABASE] Error uploading file: {e}")
             return None
     
     async def get_file_url(self, bucket: str, file_path: str) -> Optional[str]:

@@ -31,7 +31,17 @@ function formatApiError(error: any): string {
   return JSON.stringify(summary, null, 2)
 }
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+
+if (!backendUrl) {
+  if (typeof window !== 'undefined') {
+    console.error(
+      'CRITICAL: NEXT_PUBLIC_BACKEND_URL is not set. ' +
+      'All API calls will fail. Set this in your Vercel project environment variables.'
+    )
+  }
+  throw new Error('NEXT_PUBLIC_BACKEND_URL environment variable is required')
+}
 
 // Create axios instance
 const api = axios.create({
