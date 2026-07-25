@@ -75,6 +75,8 @@ const createMissingClient = (): SupabaseClient => {
   } as unknown as SupabaseClient
 }
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '')
+
 export const supabase: SupabaseClient =
   supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -84,6 +86,14 @@ export const supabase: SupabaseClient =
         },
       })
     : createMissingClient()
+
+/** Resolve the redirect URL for auth flows (email confirmations, etc.).
+ *  Uses the configured site URL in production, falls back to window origin in dev. */
+export function getAuthRedirectUrl(): string {
+  if (siteUrl) return siteUrl
+  if (typeof window !== 'undefined') return window.location.origin
+  return 'http://localhost:3000'
+}
 
 // Helper function to get current user
 export const getCurrentUser = async () => {
