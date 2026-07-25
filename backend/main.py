@@ -43,6 +43,7 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "https://internflow-rudransh.vercel.app",
 ]
 
 # Get additional origins from environment variable
