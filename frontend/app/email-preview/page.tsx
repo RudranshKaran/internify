@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
-import { llmAPI, emailAPI } from '@/lib/api'
-import { toast } from '@/components/Toast'
+import { llmAPI } from '@/lib/api'
 import EmailPreview from '@/components/EmailPreview'
-import Loader from '@/components/Loader'
+import EmailGenerationLoading from '@/components/EmailGenerationLoading'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
@@ -14,12 +13,12 @@ export default function EmailPreviewPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<{ status?: number; message: string } | null>(null)
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [internship, setInternship] = useState<any>(null)
   const [recipientEmail, setRecipientEmail] = useState('')
   const hasCheckedAuth = useRef(false)
-  const isRedirecting = useRef(false)
 
   useEffect(() => {
     if (hasCheckedAuth.current) return
@@ -39,15 +38,15 @@ export default function EmailPreviewPage() {
     const internshipData = localStorage.getItem('selectedInternship')
 
     if (!internshipData) {
-      toast.error('No internship selected')
-      router.push('/dashboard')
+      setError({ message: 'No internship selected. Go back to the dashboard and select an internship first.' })
+      setLoading(false)
       return
     }
 
     const parsedInternship = JSON.parse(internshipData)
     setInternship(parsedInternship)
 
-    // Extract recipient email (you might need to implement email extraction logic)
+    // Extract recipient email
     const email = extractEmailFromInternship(parsedInternship)
     setRecipientEmail(email)
 
@@ -63,11 +62,10 @@ export default function EmailPreviewPage() {
 
   const generateEmail = async (internshipData: any, resumeText: string) => {
     setGenerating(true)
+    setError(null)
     try {
       console.log('[EMAIL-PREVIEW] Generating email for:', internshipData.title)
       console.log('[EMAIL-PREVIEW] Company:', internshipData.company)
-      console.log('[EMAIL-PREVIEW] Sending description (length):', internshipData.description?.length || 0, 'chars')
-      console.log('[EMAIL-PREVIEW] Description being sent:', internshipData.description?.substring(0, 300) || 'NO DESCRIPTION!')
       
       const response = await llmAPI.generateEmail({
         internship_description: internshipData.description || internshipData.title,
@@ -77,36 +75,60 @@ export default function EmailPreviewPage() {
       })
 
       console.log('[EMAIL-PREVIEW] Email generated successfully')
-      console.log('[EMAIL-PREVIEW] Subject:', response.data.subject)
-      console.log('[EMAIL-PREVIEW] Body length:', response.data.body?.length || 0, 'chars')
-      // TRACE-4: body length right before storing in component state / rendering
-      console.log('[TRACE-4] After frontend API response — body:', (response.data.body?.length || 0), 'chars, ends_with:', JSON.stringify(response.data.body?.slice(-50)))
-      console.log('[TRACE-4] Raw body from API:', JSON.stringify(response.data.body))
 
       setSubject(response.data.subject)
       setBody(response.data.body)
-    } catch (error: any) {
-      console.error('[EMAIL-PREVIEW] Generation failed:', error)
-      toast.error(error.response?.data?.detail || 'Failed to generate email')
-      router.push('/dashboard')
+    } catch (err: any) {
+      console.error('[EMAIL-PREVIEW] Generation failed:', err)
+      const status = err.response?.status
+      const detail = err.response?.data?.detail || err.message || 'Failed to generate email'
+      setError({ status, message: detail })
     } finally {
       setGenerating(false)
       setLoading(false)
     }
   }
 
+  const handleRetry = useCallback(() => {
+    if (!internship) return
+    setError(null)
+    setGenerating(true)
+    setLoading(true)
+    generateEmail(internship, '')
+  }, [internship])
+
+  const handleBack = useCallback(() => {
+    router.push('/dashboard')
+  }, [router])
+
   const handleRegenerate = async () => {
     if (!internship) return
-    // Pass empty string so backend fetches resume from database for current user
     await generateEmail(internship, '')
   }
 
-
-
-  if (loading || generating) {
+  // Show animated loading or error state while generating
+  if (loading || generating || error) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20">
-        <Loader text={generating ? 'Generating personalized email...' : 'Loading...'} />
+        <div className="mb-6">
+          <Link href="/dashboard" className="inline-flex items-center text-gray-600 hover:text-gray-900">
+            <ArrowLeft className="w-5 h-5 mr-2" />
+            Back to Dashboard
+          </Link>
+        </div>
+
+        {internship && (
+          <div className="mb-8 p-4 bg-gray-50 rounded-lg max-w-lg mx-auto">
+            <h3 className="font-semibold text-gray-900">{internship.title}</h3>
+            <p className="text-sm text-gray-600">{internship.company}</p>
+          </div>
+        )}
+
+        <EmailGenerationLoading
+          error={error}
+          onRetry={error ? handleRetry : undefined}
+          onBack={error ? handleBack : undefined}
+        />
       </div>
     )
   }
